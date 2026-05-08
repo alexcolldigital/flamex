@@ -12,8 +12,21 @@ npm run web
 Optional API override:
 
 ```bash
-set EXPO_PUBLIC_API_URL=http://localhost:5000
+set EXPO_PUBLIC_API_URL=https://flamex-backend.onrender.com
 ```
+
+## Render deployment
+
+This Expo app should be deployed on Render as a `Static Site`, not a `Web Service`.
+
+Use these settings:
+
+```bash
+Build Command: npm install && npm run build:web
+Publish Directory: dist
+```
+
+If Render tries to start `node_modules/expo/AppEntry.js`, it means the service was created as a Node server and is attempting to run the Expo entrypoint directly. That causes errors like `ERR_MODULE_NOT_FOUND` for Expo internals such as `registerRootComponent`.
 
 ## Backend features exposed in the UI
 

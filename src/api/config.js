@@ -1,12 +1,13 @@
 import { Platform } from 'react-native';
 
 const trimTrailingSlash = (value) => value.replace(/\/+$/, '');
+const PRODUCTION_API_ORIGIN = 'https://flamex-backend.onrender.com';
 
 const DEFAULT_API_ORIGIN = {
-  android: 'http://10.0.2.2:5000',
-  ios: 'http://localhost:5000',
-  web: 'http://localhost:5000',
-  default: 'http://localhost:5000'
+  android: PRODUCTION_API_ORIGIN,
+  ios: PRODUCTION_API_ORIGIN,
+  web: PRODUCTION_API_ORIGIN,
+  default: PRODUCTION_API_ORIGIN
 };
 
 export const API_ORIGIN = trimTrailingSlash(
