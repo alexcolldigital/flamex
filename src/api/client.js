@@ -118,6 +118,8 @@ export const billsAPI = {
   getProviders: (type) => apiClient.get(type ? `/bills/providers/${type}` : '/bills/providers'),
   getDataPlans: (provider) => apiClient.get(`/bills/data-plans/${provider}`),
   getCablePackages: (provider) => apiClient.get(`/bills/cable-packages/${provider}`),
+  getGiftCardRates: () => apiClient.get('/bills/giftcard-rates'),
+  getGiftCardTrades: () => apiClient.get('/bills/giftcard-trades'),
   validatePhone: (phoneNumber) => apiClient.post('/bills/validate-phone', { phoneNumber }),
   validateMeter: (provider, meterNumber, meterType) =>
     apiClient.post('/bills/validate-meter', { provider, meterNumber, meterType }),
@@ -128,7 +130,7 @@ export const billsAPI = {
   payElectricity: (data) => apiClient.post('/bills/electricity', data),
   payCable: (data) => apiClient.post('/bills/cable', data),
   payBetting: (data) => apiClient.post('/bills/betting', data),
-  buyGiftCard: (data) => apiClient.post('/bills/giftcard', data),
+  submitGiftCardTrade: (data) => apiClient.post('/bills/giftcard-trade', data),
   getHistory: (params = {}) => apiClient.get('/bills/history', { params })
 };
 

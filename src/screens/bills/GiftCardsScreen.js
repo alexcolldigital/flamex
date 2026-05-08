@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Modal,
+  Image,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,84 +13,176 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { useFocusEffect } from '@react-navigation/native';
 import { billsAPI } from '../../api/client';
 import BillPinModal from '../../components/BillPinModal';
+import { currencyFormatter } from '../../lib/finance';
 import { useAuthStore } from '../../store/authStore';
 import { useAppTheme } from '../../theme/ThemeProvider';
+
+const STATUS_COPY = {
+  pending_review: { label: 'Pending Review', color: '#f59e0b' },
+  more_info_required: { label: 'More Info Needed', color: '#3b82f6' },
+  completed: { label: 'Completed', color: '#22c55e' },
+  rejected: { label: 'Rejected', color: '#ef4444' }
+};
 
 export default function GiftCardsScreen({ navigation }) {
   const { user, fetchUserProfile } = useAuthStore();
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const [categories, setCategories] = useState([]);
-  const [denominations, setDenominations] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedDenomination, setSelectedDenomination] = useState(null);
-  const [quantity, setQuantity] = useState('1');
-  const [purchasedCards, setPurchasedCards] = useState([]);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [supportedCards, setSupportedCards] = useState([]);
+  const [disclaimer, setDisclaimer] = useState('Final payout depends on card verification.');
+  const [trades, setTrades] = useState([]);
+  const [selectedKey, setSelectedKey] = useState('');
+  const [cardValue, setCardValue] = useState('');
+  const [cardType, setCardType] = useState('physical');
+  const [submissionMethod, setSubmissionMethod] = useState('images');
+  const [frontImageUrl, setFrontImageUrl] = useState('');
+  const [backImageUrl, setBackImageUrl] = useState('');
+  const [cardCode, setCardCode] = useState('');
+  const [tradeCodePin, setTradeCodePin] = useState('');
+  const [note, setNote] = useState('');
   const [pin, setPin] = useState('');
   const [showPinModal, setShowPinModal] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    billsAPI
-      .getProviders('giftcards')
-      .then((response) => {
-        setCategories(response.data.providers?.categories || []);
-        setDenominations(response.data.providers?.denominations || []);
-      })
-      .catch(() => {
-        setCategories([]);
-        setDenominations([]);
-      });
+  const loadData = useCallback(async () => {
+    try {
+      const [ratesResponse, tradesResponse] = await Promise.all([
+        billsAPI.getGiftCardRates(),
+        billsAPI.getGiftCardTrades()
+      ]);
+      setSupportedCards(ratesResponse.data.supportedCards || []);
+      setDisclaimer(ratesResponse.data.disclaimer || 'Final payout depends on card verification.');
+      setTrades(tradesResponse.data.trades || []);
+    } catch (error) {
+      console.log('Load gift card trade data error:', error);
+      setSupportedCards([]);
+      setTrades([]);
+    }
   }, []);
 
-  const calculateTotal = () => {
-    if (!selectedDenomination || !quantity) return 0;
-    const subtotal = Number(selectedDenomination) * Number(quantity || 0);
-    const feeAmount = subtotal * 0.05;
-    return subtotal + feeAmount;
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
+
+  const selectedCard = useMemo(
+    () => supportedCards.find((item) => `${item.brand}-${item.country}-${item.currency}` === selectedKey),
+    [selectedKey, supportedCards]
+  );
+
+  const estimatedPayout = useMemo(() => {
+    const value = Number(cardValue);
+    if (!selectedCard || Number.isNaN(value) || value <= 0) return 0;
+    return value * Number(selectedCard.ratePerUnit || 0);
+  }, [cardValue, selectedCard]);
+
+  const resetForm = () => {
+    setCardValue('');
+    setCardType('physical');
+    setSubmissionMethod('images');
+    setFrontImageUrl('');
+    setBackImageUrl('');
+    setCardCode('');
+    setTradeCodePin('');
+    setNote('');
+    setPin('');
   };
 
-  const total = calculateTotal();
-  const selectedCategoryItem = categories.find((item) => item.id === selectedCategory);
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchUserProfile();
+    await loadData();
+    setRefreshing(false);
+  };
+
+  const pickImage = async (side) => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Permission needed', 'Please allow photo access to attach gift card images.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.7,
+      base64: true
+    });
+
+    if (result.canceled || !result.assets?.length) {
+      return;
+    }
+
+    const asset = result.assets[0];
+    const imageValue = asset.base64 ? `data:${asset.mimeType || 'image/jpeg'};base64,${asset.base64}` : asset.uri;
+    if (side === 'front') {
+      setFrontImageUrl(imageValue);
+    } else {
+      setBackImageUrl(imageValue);
+    }
+  };
 
   const openPinModal = () => {
-    const parsedQuantity = Number(quantity);
-    if (!selectedCategory) {
-      Alert.alert('Error', 'Please select a gift card category');
+    if (!selectedCard) {
+      Alert.alert('Missing details', 'Select a supported gift card first.');
       return;
     }
-    if (!selectedDenomination) {
-      Alert.alert('Error', 'Please select a denomination');
+    if (!cardValue || Number(cardValue) <= 0) {
+      Alert.alert('Missing amount', 'Enter the card value you want to trade.');
       return;
     }
-    if (!Number.isInteger(parsedQuantity) || parsedQuantity < 1 || parsedQuantity > 10) {
-      Alert.alert('Error', 'Quantity must be between 1 and 10');
+    if (submissionMethod === 'images' && !frontImageUrl) {
+      Alert.alert('Missing image', 'Upload at least the front image of the card.');
+      return;
+    }
+    if (submissionMethod === 'code' && !cardCode.trim()) {
+      Alert.alert('Missing code', 'Enter the gift card code to continue.');
       return;
     }
     setShowPinModal(true);
   };
 
-  const handlePurchase = async () => {
-    setIsLoading(true);
+  const submitTrade = async () => {
+    if (!selectedCard) return;
+
+    setLoading(true);
     try {
-      const response = await billsAPI.buyGiftCard({
-        category: selectedCategory,
-        denomination: Number(selectedDenomination),
-        quantity: Number(quantity),
+      const response = await billsAPI.submitGiftCardTrade({
+        brand: selectedCard.brand,
+        country: selectedCard.country,
+        currency: selectedCard.currency,
+        cardValue: Number(cardValue),
+        cardType,
+        submissionMethod,
+        frontImageUrl: submissionMethod === 'images' ? frontImageUrl : '',
+        backImageUrl: submissionMethod === 'images' ? backImageUrl : '',
+        cardCode: submissionMethod === 'code' ? cardCode.trim() : '',
+        tradeCodePin: submissionMethod === 'code' ? tradeCodePin.trim() : '',
+        note: note.trim(),
         pin
       });
+
       await fetchUserProfile();
-      setPurchasedCards(response.data.details?.codes || []);
+      await loadData();
       setShowPinModal(false);
-      setPin('');
-      setShowSuccessModal(true);
+      resetForm();
+      Alert.alert(
+        'Trade submitted',
+        `Your trade is now ${response.data.trade?.status?.replace(/_/g, ' ') || 'pending review'}.`
+      );
     } catch (error) {
-      Alert.alert('Purchase failed', error.response?.data?.message || 'Unable to buy gift card.');
+      Alert.alert('Submission failed', error.response?.data?.message || 'Unable to submit gift card trade.');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -99,158 +192,221 @@ export default function GiftCardsScreen({ navigation }) {
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Gift Cards</Text>
+        <Text style={styles.headerTitle}>Sell Gift Card</Text>
         <View style={styles.placeholder} />
       </LinearGradient>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+      >
         <View style={styles.balanceCard}>
           <Text style={styles.balanceLabel}>Available balance</Text>
-          <Text style={styles.balanceValue}>N{Number(user?.balances?.NGN || 0).toLocaleString()}</Text>
+          <Text style={styles.balanceValue}>{currencyFormatter(Number(user?.balances?.NGN || 0), 'NGN')}</Text>
         </View>
 
-        <Text style={styles.sectionLabel}>Select Gift Card</Text>
-        <View style={styles.categoriesGrid}>
-          {categories.map((cat) => (
-            <TouchableOpacity
-              key={cat.id}
-              style={[styles.categoryCard, selectedCategory === cat.id && { borderColor: colors.primary, borderWidth: 2 }]}
-              onPress={() => setSelectedCategory(cat.id)}
-            >
-              <View style={[styles.categoryIcon, { backgroundColor: colors.primarySoft }]}>
-                <Ionicons name="gift-outline" size={24} color={colors.primary} />
-              </View>
-              <Text style={[styles.categoryName, selectedCategory === cat.id && { color: colors.primary }]} numberOfLines={1}>
-                {cat.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {selectedCategoryItem ? (
-          <View style={styles.selectedCategoryCard}>
-            <View style={[styles.selectedIcon, { backgroundColor: colors.primarySoft }]}>
-              <Ionicons name="gift-outline" size={32} color={colors.primary} />
-            </View>
-            <View>
-              <Text style={styles.selectedName}>{selectedCategoryItem.name}</Text>
-              <Text style={styles.selectedRate}>Backend total includes 5% fee</Text>
-            </View>
+        <View style={styles.infoCard}>
+          <Ionicons name="shield-checkmark-outline" size={22} color={colors.primary} />
+          <View style={styles.infoCopy}>
+            <Text style={styles.infoTitle}>Manual verification</Text>
+            <Text style={styles.infoText}>{disclaimer}</Text>
           </View>
-        ) : null}
-
-        <Text style={styles.sectionLabel}>Select Denomination ($)</Text>
-        <View style={styles.denominationsRow}>
-          {denominations.map((denom) => (
-            <TouchableOpacity
-              key={denom}
-              style={[styles.denomBtn, selectedDenomination === denom && styles.denomBtnActive]}
-              onPress={() => setSelectedDenomination(denom)}
-            >
-              <Text style={[styles.denomText, selectedDenomination === denom && styles.denomTextActive]}>${denom}</Text>
-            </TouchableOpacity>
-          ))}
         </View>
 
-        <Text style={styles.sectionLabel}>Quantity</Text>
-        <View style={styles.quantityContainer}>
-          <TouchableOpacity
-            style={styles.quantityBtn}
-            onPress={() => setQuantity(Math.max(1, Number(quantity || 1) - 1).toString())}
-          >
-            <Ionicons name="remove" size={20} color={colors.text} />
-          </TouchableOpacity>
+        <Text style={styles.sectionLabel}>Current rates</Text>
+        <View style={styles.cardGrid}>
+          {supportedCards.map((item) => {
+            const key = `${item.brand}-${item.country}-${item.currency}`;
+            const isSelected = selectedKey === key;
+            return (
+              <TouchableOpacity
+                key={key}
+                style={[styles.rateCard, isSelected && styles.rateCardActive]}
+                onPress={() => setSelectedKey(key)}
+              >
+                <Text style={[styles.rateTitle, isSelected && styles.rateTitleActive]}>
+                  {item.brand} {item.country}
+                </Text>
+                <Text style={styles.rateSubtitle}>
+                  {currencyFormatter(item.ratePerUnit || 0, 'NGN')} / {item.currency}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <Text style={styles.sectionLabel}>Trade details</Text>
+        <View style={styles.formCard}>
+          <Text style={styles.label}>Card value</Text>
           <TextInput
-            style={styles.quantityInput}
-            value={quantity}
-            onChangeText={(value) => setQuantity(value.replace(/\D/g, '').slice(0, 2))}
-            keyboardType="number-pad"
-            textAlign="center"
+            style={styles.input}
+            value={cardValue}
+            onChangeText={(value) => setCardValue(value.replace(/[^0-9.]/g, '').slice(0, 10))}
+            keyboardType="decimal-pad"
+            placeholder={selectedCard ? `Enter amount in ${selectedCard.currency}` : 'Select a card first'}
+            placeholderTextColor={colors.textMuted}
           />
-          <TouchableOpacity
-            style={styles.quantityBtn}
-            onPress={() => setQuantity((Number(quantity || 0) + 1).toString())}
-          >
-            <Ionicons name="add" size={20} color={colors.text} />
-          </TouchableOpacity>
-        </View>
 
-        {selectedDenomination ? (
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>Order Summary</Text>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Gift Card</Text>
-              <Text style={styles.summaryValue}>{selectedCategoryItem?.name} ${selectedDenomination}</Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Quantity</Text>
-              <Text style={styles.summaryValue}>{quantity}</Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Estimated total</Text>
-              <Text style={styles.summaryValue}>N{total.toLocaleString()}</Text>
-            </View>
+          <Text style={styles.label}>Card type</Text>
+          <View style={styles.optionRow}>
+            {['physical', 'e_code'].map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={[styles.optionButton, cardType === option && styles.optionButtonActive]}
+                onPress={() => setCardType(option)}
+              >
+                <Text style={[styles.optionText, cardType === option && styles.optionTextActive]}>
+                  {option === 'physical' ? 'Physical' : 'E-code'}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
-        ) : null}
+
+          <Text style={styles.label}>Submission method</Text>
+          <View style={styles.optionRow}>
+            {[
+              { key: 'images', label: 'Upload images' },
+              { key: 'code', label: 'Enter code' }
+            ].map((option) => (
+              <TouchableOpacity
+                key={option.key}
+                style={[styles.optionButton, submissionMethod === option.key && styles.optionButtonActive]}
+                onPress={() => setSubmissionMethod(option.key)}
+              >
+                <Text style={[styles.optionText, submissionMethod === option.key && styles.optionTextActive]}>
+                  {option.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {submissionMethod === 'images' ? (
+            <View>
+              <TouchableOpacity style={styles.uploadCard} onPress={() => pickImage('front')}>
+                {frontImageUrl ? (
+                  <Image source={{ uri: frontImageUrl }} style={styles.previewImage} />
+                ) : (
+                  <View style={styles.uploadEmpty}>
+                    <Ionicons name="cloud-upload-outline" size={24} color={colors.primary} />
+                    <Text style={styles.uploadTitle}>Upload front image</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.uploadCard} onPress={() => pickImage('back')}>
+                {backImageUrl ? (
+                  <Image source={{ uri: backImageUrl }} style={styles.previewImage} />
+                ) : (
+                  <View style={styles.uploadEmpty}>
+                    <Ionicons name="images-outline" size={24} color={colors.primary} />
+                    <Text style={styles.uploadTitle}>Upload back image</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View>
+              <TextInput
+                style={[styles.input, styles.multilineInput]}
+                value={cardCode}
+                onChangeText={setCardCode}
+                placeholder="Enter gift card code"
+                placeholderTextColor={colors.textMuted}
+                multiline
+              />
+              <TextInput
+                style={styles.input}
+                value={tradeCodePin}
+                onChangeText={setTradeCodePin}
+                placeholder="Enter card PIN if available"
+                placeholderTextColor={colors.textMuted}
+              />
+            </View>
+          )}
+
+          <Text style={styles.label}>Note for reviewer</Text>
+          <TextInput
+            style={[styles.input, styles.multilineInput]}
+            value={note}
+            onChangeText={setNote}
+            placeholder="Add any helpful context for review"
+            placeholderTextColor={colors.textMuted}
+            multiline
+          />
+
+          <View style={styles.estimateCard}>
+            <Text style={styles.estimateLabel}>Estimated payout</Text>
+            <Text style={styles.estimateValue}>
+              {estimatedPayout > 0 ? currencyFormatter(estimatedPayout, 'NGN') : 'N0'}
+            </Text>
+            <Text style={styles.estimateNote}>Final payout depends on admin verification.</Text>
+          </View>
+        </View>
 
         <TouchableOpacity
-          style={[
-            styles.purchaseBtn,
-            (!selectedCategory || !selectedDenomination || Number(quantity) < 1) && styles.purchaseBtnDisabled
-          ]}
+          style={[styles.submitButton, (!selectedCard || !cardValue || loading) && styles.submitButtonDisabled]}
           onPress={openPinModal}
-          disabled={!selectedCategory || !selectedDenomination || Number(quantity) < 1}
+          disabled={!selectedCard || !cardValue || loading}
         >
-          <Text style={styles.purchaseBtnText}>
-            {total > 0 ? `Pay N${total.toLocaleString()}` : 'Complete Order'}
-          </Text>
+          <Text style={styles.submitButtonText}>Submit for review</Text>
         </TouchableOpacity>
+
+        <View style={styles.historySection}>
+          <Text style={styles.sectionLabel}>Recent trades</Text>
+          {trades.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Text style={styles.emptyText}>No gift card trades yet.</Text>
+            </View>
+          ) : (
+            trades.map((trade) => {
+              const statusMeta = STATUS_COPY[trade.status] || STATUS_COPY.pending_review;
+              return (
+                <View key={trade._id} style={styles.tradeCard}>
+                  <View style={styles.tradeHeader}>
+                    <View>
+                      <Text style={styles.tradeTitle}>
+                        {trade.brand} {trade.country} {trade.cardValue}
+                        {trade.currency}
+                      </Text>
+                      <Text style={styles.tradeReference}>{trade.reference}</Text>
+                    </View>
+                    <View style={[styles.statusBadge, { backgroundColor: `${statusMeta.color}20` }]}>
+                      <Text style={[styles.statusText, { color: statusMeta.color }]}>{statusMeta.label}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.tradeRow}>
+                    <Text style={styles.tradeLabel}>Estimated payout</Text>
+                    <Text style={styles.tradeValue}>
+                      {currencyFormatter(trade.estimatedPayout || trade.finalPayout || 0, 'NGN')}
+                    </Text>
+                  </View>
+                  {trade.reviewNote ? (
+                    <Text style={styles.tradeNote}>Admin note: {trade.reviewNote}</Text>
+                  ) : null}
+                  {trade.rejectionReason ? (
+                    <Text style={styles.tradeReject}>Reason: {trade.rejectionReason}</Text>
+                  ) : null}
+                </View>
+              );
+            })
+          )}
+        </View>
       </ScrollView>
 
       <BillPinModal
         visible={showPinModal}
         pin={pin}
         setPin={setPin}
-        loading={isLoading}
-        onConfirm={handlePurchase}
+        loading={loading}
+        onConfirm={submitTrade}
         onClose={() => {
           setShowPinModal(false);
           setPin('');
         }}
-        subtitle="Authorize your gift card purchase"
+        title="Confirm gift card trade"
+        subtitle="Enter your transaction PIN to submit this card for review"
       />
-
-      <Modal visible={showSuccessModal} transparent animationType="fade" onRequestClose={() => setShowSuccessModal(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.successIcon}>
-              <Ionicons name="checkmark" size={40} color={colors.black} />
-            </View>
-            <Text style={styles.modalTitle}>Purchase Successful</Text>
-            <Text style={styles.modalText}>Your gift card codes are available below.</Text>
-
-            <View style={styles.codesContainer}>
-              {purchasedCards.map((card, index) => (
-                <View key={index} style={styles.codeCard}>
-                  <Text style={styles.codeLabel}>Card {index + 1}</Text>
-                  <Text style={styles.codeValue}>{card.code}</Text>
-                  <Text style={styles.codePin}>PIN: {card.pin}</Text>
-                </View>
-              ))}
-            </View>
-
-            <TouchableOpacity
-              style={styles.modalBtn}
-              onPress={() => {
-                setShowSuccessModal(false);
-                navigation.goBack();
-              }}
-            >
-              <Text style={styles.modalBtnText}>Done</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -258,49 +414,180 @@ export default function GiftCardsScreen({ navigation }) {
 const createStyles = (colors) =>
   StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 60, paddingHorizontal: 16, paddingBottom: 16 },
-    backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center' },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingTop: 60,
+      paddingHorizontal: 16,
+      paddingBottom: 16
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.surface,
+      justifyContent: 'center',
+      alignItems: 'center'
+    },
     headerTitle: { fontSize: 18, fontWeight: '600', color: colors.text },
     placeholder: { width: 40 },
-    scrollView: { flex: 1, padding: 16 },
-    balanceCard: { backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: colors.border },
-    balanceLabel: { color: colors.textMuted },
+    scrollView: { flex: 1, paddingHorizontal: 16 },
+    balanceCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 14,
+      padding: 18,
+      marginTop: 12,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    balanceLabel: { color: colors.textMuted, fontSize: 13 },
     balanceValue: { color: colors.success, fontSize: 24, fontWeight: '700', marginTop: 6 },
-    sectionLabel: { fontSize: 14, fontWeight: '500', color: colors.text, marginBottom: 12 },
-    categoriesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
-    categoryCard: { width: '18%', backgroundColor: colors.surface, borderRadius: 12, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.border },
-    categoryIcon: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginBottom: 6 },
-    categoryName: { fontSize: 9, color: colors.textMuted, textAlign: 'center' },
-    selectedCategoryCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, padding: 16, borderRadius: 12, marginBottom: 20, borderWidth: 1, borderColor: colors.border },
-    selectedIcon: { width: 56, height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
-    selectedName: { fontSize: 18, fontWeight: '600', color: colors.text },
-    selectedRate: { fontSize: 13, color: colors.textMuted, marginTop: 4 },
-    denominationsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
-    denomBtn: { backgroundColor: colors.surface, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 8, borderWidth: 1, borderColor: colors.border },
-    denomBtnActive: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
-    denomText: { fontSize: 14, color: colors.textMuted, fontWeight: '500' },
-    denomTextActive: { color: colors.primary },
-    quantityContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 20 },
-    quantityBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: colors.border },
-    quantityInput: { width: 80, height: 50, backgroundColor: colors.surface, borderRadius: 8, color: colors.text, fontSize: 20, fontWeight: '600', borderWidth: 1, borderColor: colors.border },
-    summaryCard: { backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: colors.border },
-    summaryTitle: { fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: 12 },
-    summaryRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border },
-    summaryLabel: { fontSize: 13, color: colors.textMuted },
-    summaryValue: { fontSize: 14, color: colors.text, fontWeight: '500' },
-    purchaseBtn: { backgroundColor: colors.primary, paddingVertical: 16, borderRadius: 12, alignItems: 'center', marginBottom: 16 },
-    purchaseBtnDisabled: { opacity: 0.6 },
-    purchaseBtnText: { color: colors.black, fontSize: 16, fontWeight: '700' },
-    modalOverlay: { flex: 1, backgroundColor: colors.overlay, justifyContent: 'center', alignItems: 'center', padding: 20 },
-    modalContent: { backgroundColor: colors.surface, borderRadius: 20, padding: 24, width: '100%', maxWidth: 400, alignItems: 'center', borderWidth: 1, borderColor: colors.border },
-    successIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.success, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-    modalTitle: { fontSize: 20, fontWeight: '700', color: colors.text },
-    modalText: { fontSize: 14, color: colors.textMuted, textAlign: 'center', marginTop: 8, marginBottom: 16 },
-    codesContainer: { width: '100%', marginBottom: 20, maxHeight: 280 },
-    codeCard: { backgroundColor: colors.input, borderRadius: 12, padding: 16, marginBottom: 8, borderWidth: 1, borderColor: colors.border },
-    codeLabel: { fontSize: 12, color: colors.textMuted, marginBottom: 4 },
-    codeValue: { fontSize: 16, fontWeight: '600', color: colors.primary, letterSpacing: 2, marginBottom: 8 },
-    codePin: { fontSize: 14, color: colors.text },
-    modalBtn: { backgroundColor: colors.primary, paddingVertical: 14, paddingHorizontal: 32, borderRadius: 12 },
-    modalBtnText: { color: colors.black, fontSize: 16, fontWeight: '700' }
+    infoCard: {
+      flexDirection: 'row',
+      gap: 12,
+      backgroundColor: colors.surface,
+      borderRadius: 14,
+      padding: 16,
+      marginTop: 16,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    infoCopy: { flex: 1 },
+    infoTitle: { color: colors.text, fontWeight: '700', fontSize: 15, marginBottom: 4 },
+    infoText: { color: colors.textMuted, fontSize: 13, lineHeight: 19 },
+    sectionLabel: { color: colors.text, fontSize: 15, fontWeight: '700', marginTop: 20, marginBottom: 12 },
+    cardGrid: { gap: 10 },
+    rateCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 14,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    rateCardActive: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primarySoft
+    },
+    rateTitle: { color: colors.text, fontSize: 15, fontWeight: '600' },
+    rateTitleActive: { color: colors.primary },
+    rateSubtitle: { color: colors.textMuted, fontSize: 13, marginTop: 4 },
+    formCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 14,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    label: { color: colors.text, fontSize: 13, fontWeight: '600', marginTop: 12, marginBottom: 8 },
+    input: {
+      backgroundColor: colors.input,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      color: colors.text,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      fontSize: 14
+    },
+    multilineInput: {
+      minHeight: 92,
+      textAlignVertical: 'top'
+    },
+    optionRow: {
+      flexDirection: 'row',
+      gap: 10,
+      flexWrap: 'wrap'
+    },
+    optionButton: {
+      flex: 1,
+      minWidth: 120,
+      backgroundColor: colors.input,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingVertical: 12,
+      alignItems: 'center'
+    },
+    optionButtonActive: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primarySoft
+    },
+    optionText: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
+    optionTextActive: { color: colors.primary },
+    uploadCard: {
+      backgroundColor: colors.input,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: 'hidden',
+      marginBottom: 10
+    },
+    uploadEmpty: {
+      minHeight: 120,
+      justifyContent: 'center',
+      alignItems: 'center',
+      gap: 8
+    },
+    uploadTitle: { color: colors.textMuted, fontSize: 13, fontWeight: '600' },
+    previewImage: { width: '100%', height: 160, resizeMode: 'cover' },
+    estimateCard: {
+      marginTop: 16,
+      backgroundColor: colors.primarySoft,
+      borderRadius: 12,
+      padding: 14
+    },
+    estimateLabel: { color: colors.textMuted, fontSize: 13 },
+    estimateValue: { color: colors.text, fontSize: 24, fontWeight: '700', marginTop: 6 },
+    estimateNote: { color: colors.textMuted, fontSize: 12, marginTop: 6 },
+    submitButton: {
+      backgroundColor: colors.primary,
+      borderRadius: 14,
+      alignItems: 'center',
+      paddingVertical: 16,
+      marginTop: 18,
+      marginBottom: 10
+    },
+    submitButtonDisabled: { opacity: 0.6 },
+    submitButtonText: { color: colors.black, fontSize: 16, fontWeight: '700' },
+    historySection: { paddingBottom: 28 },
+    emptyCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 14,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    emptyText: { color: colors.textMuted, fontSize: 13 },
+    tradeCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 14,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 12
+    },
+    tradeHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'flex-start',
+      gap: 12
+    },
+    tradeTitle: { color: colors.text, fontSize: 15, fontWeight: '700' },
+    tradeReference: { color: colors.textMuted, fontSize: 12, marginTop: 4 },
+    statusBadge: {
+      borderRadius: 999,
+      paddingHorizontal: 10,
+      paddingVertical: 6
+    },
+    statusText: { fontSize: 12, fontWeight: '700' },
+    tradeRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginTop: 14
+    },
+    tradeLabel: { color: colors.textMuted, fontSize: 13 },
+    tradeValue: { color: colors.text, fontSize: 14, fontWeight: '600' },
+    tradeNote: { color: colors.primary, fontSize: 13, marginTop: 12 },
+    tradeReject: { color: colors.error || '#ef4444', fontSize: 13, marginTop: 8 }
   });

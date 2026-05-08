@@ -52,8 +52,8 @@ export const BILL_CATEGORIES = [
   },
   {
     id: 'giftcard',
-    name: 'Gift Cards',
-    description: 'Buy international gift cards',
+    name: 'Sell Gift Card',
+    description: 'Submit cards for manual review',
     icon: 'gift-outline',
     color: '#ec4899',
     route: 'GiftCards'
