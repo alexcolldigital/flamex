@@ -24,6 +24,8 @@ export default function P2PCreateOfferScreen({ navigation }) {
   const [minOrderAmount, setMinOrderAmount] = useState('');
   const [maxOrderAmount, setMaxOrderAmount] = useState('');
   const [paymentWindowMinutes, setPaymentWindowMinutes] = useState('30');
+  const [region, setRegion] = useState('NG');
+  const [merchantOnly, setMerchantOnly] = useState(false);
   const [bankName, setBankName] = useState('');
   const [accountNumber, setAccountNumber] = useState('');
   const [accountName, setAccountName] = useState('');
@@ -47,7 +49,10 @@ export default function P2PCreateOfferScreen({ navigation }) {
         minOrderAmount: Number(minOrderAmount),
         maxOrderAmount: Number(maxOrderAmount),
         paymentWindowMinutes: Number(paymentWindowMinutes || 30),
+        paymentMethods: ['bank_transfer'],
         paymentMethod: 'bank_transfer',
+        region,
+        merchantOnly,
         paymentDetails: {
           bankName: bankName || null,
           accountNumber: accountNumber || null,
@@ -104,6 +109,33 @@ export default function P2PCreateOfferScreen({ navigation }) {
               <Text style={[styles.assetChipText, asset === item && styles.assetChipTextActive]}>{item}</Text>
             </TouchableOpacity>
           ))}
+        </View>
+
+        <Text style={styles.label}>Region</Text>
+        <TextInput
+          style={styles.input}
+          value={region}
+          onChangeText={(value) => setRegion((value || 'NG').toUpperCase())}
+          placeholder="NG"
+          placeholderTextColor={colors.textMuted}
+          maxLength={3}
+          autoCapitalize="characters"
+        />
+
+        <Text style={styles.label}>Buyer access</Text>
+        <View style={styles.segmentRow}>
+          <TouchableOpacity
+            style={[styles.segmentButton, !merchantOnly && styles.segmentButtonActive]}
+            onPress={() => setMerchantOnly(false)}
+          >
+            <Text style={[styles.segmentText, !merchantOnly && styles.segmentTextActive]}>All verified users</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.segmentButton, merchantOnly && styles.segmentButtonActive]}
+            onPress={() => setMerchantOnly(true)}
+          >
+            <Text style={[styles.segmentText, merchantOnly && styles.segmentTextActive]}>Merchant only</Text>
+          </TouchableOpacity>
         </View>
 
         {[

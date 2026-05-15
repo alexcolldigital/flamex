@@ -16,23 +16,26 @@ import { useAuthStore } from '../../store/authStore';
 import { useTransferStore } from '../../store/transferStore';
 import { useWalletStore } from '../../store/walletStore';
 
-const SUPPORTED_CHAINS = [
-  { id: 'solana', name: 'Solana', symbol: 'SOL', color: '#9945ff' },
-  { id: 'ethereum', name: 'Ethereum', symbol: 'ETH', color: '#627eea' },
-  { id: 'bsc', name: 'BSC', symbol: 'BNB', color: '#f3ba2f' },
-  { id: 'base', name: 'Base', symbol: 'ETH', color: '#0052ff' },
+const TRANSFER_ASSETS = [
+  { id: 'ngn', name: 'Nigerian Naira', symbol: 'NGN', color: '#16a34a', chainId: null, usernameOnly: true },
+  { id: 'sol', name: 'Solana', symbol: 'SOL', color: '#9945ff', chainId: 'solana' },
+  { id: 'usdt', name: 'Tether USD', symbol: 'USDT', color: '#26a17b', chainId: 'solana' },
+  { id: 'usdc', name: 'USD Coin', symbol: 'USDC', color: '#2775ca', chainId: 'solana' },
+  { id: 'flame', name: 'Flame Token', symbol: 'FLAME', color: '#ff6b00', chainId: 'solana' },
+  { id: 'eth', name: 'Ethereum', symbol: 'ETH', color: '#627eea', chainId: 'ethereum' },
+  { id: 'bnb', name: 'BNB', symbol: 'BNB', color: '#f3ba2f', chainId: 'bsc' },
 ];
 
 const QUICK_AMOUNTS = [10, 50, 100, 500, 1000];
 
 export default function TransferScreen({ navigation }) {
-  const { user, verifyPin } = useAuthStore();
+  const { user, verifyPin, fetchUserProfile } = useAuthStore();
   const { validateUsername, executeTransfer } = useTransferStore();
-  const { wallets, balances, fetchBalance } = useWalletStore();
+  const { fetchBalance } = useWalletStore();
   
   const [recipient, setRecipient] = useState('');
   const [recipientType, setRecipientType] = useState('username'); // 'username' or 'address'
-  const [selectedChain, setSelectedChain] = useState('solana');
+  const [selectedAsset, setSelectedAsset] = useState(TRANSFER_ASSETS[0]);
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [isValidating, setIsValidating] = useState(false);
@@ -77,19 +80,25 @@ export default function TransferScreen({ navigation }) {
     return () => clearTimeout(timer);
   }, [recipient, recipientType, debouncedValidate]);
 
-  const getSelectedBalance = () => {
-    const chainBalances = balances[selectedChain] || {};
-    return chainBalances.native || 0;
-  };
+  const availableAssets = TRANSFER_ASSETS.filter((asset) => (
+    recipientType === 'username' || !asset.usernameOnly
+  ));
 
-  const getTokenSymbol = () => {
-    return SUPPORTED_CHAINS.find(c => c.id === selectedChain)?.symbol || '';
-  };
+  useEffect(() => {
+    if (!availableAssets.find((asset) => asset.id === selectedAsset.id)) {
+      setSelectedAsset(availableAssets[0]);
+    }
+  }, [recipientType, selectedAsset.id, availableAssets]);
+
+  const getSelectedBalance = () => Number(user?.balances?.[selectedAsset.symbol] || 0);
+
+  const getTokenSymbol = () => selectedAsset.symbol;
 
   const handleMaxAmount = () => {
     const balance = getSelectedBalance();
-    // Leave some for gas fees
-    const maxAmount = Math.max(0, balance - 0.01);
+    const maxAmount = recipientType === 'address'
+      ? Math.max(0, balance - 0.01)
+      : balance;
     setAmount(maxAmount.toString());
   };
 
@@ -123,8 +132,8 @@ export default function TransferScreen({ navigation }) {
   };
 
   const confirmTransfer = async () => {
-    if (pin.length !== 6) {
-      Alert.alert('Error', 'Please enter your 6-digit PIN');
+    if (pin.length < 4 || pin.length > 6) {
+      Alert.alert('Error', 'Please enter your 4 to 6 digit PIN');
       return;
     }
 
@@ -141,7 +150,8 @@ export default function TransferScreen({ navigation }) {
       const result = await executeTransfer({
         recipient,
         recipientType,
-        chain: selectedChain,
+        chain: selectedAsset.chainId,
+        currency: selectedAsset.symbol,
         amount: parseFloat(amount),
         note,
         pin,
@@ -150,9 +160,10 @@ export default function TransferScreen({ navigation }) {
       if (result.success) {
         Alert.alert(
           'Success',
-          `Successfully sent ${amount} ${getTokenSymbol()} to @${recipient}`,
+          `Successfully sent ${amount} ${getTokenSymbol()} to ${recipientType === 'username' ? `@${recipient}` : recipient}`,
           [{ text: 'OK', onPress: () => navigation.goBack() }]
         );
+        fetchUserProfile();
         fetchBalance();
       } else {
         Alert.alert('Error', result.message || 'Transfer failed');
@@ -252,8 +263,8 @@ export default function TransferScreen({ navigation }) {
         </View>
       )}
 
-      {/* Chain Selection */}
-      <Text style={styles.sectionLabel}>Select Chain</Text>
+      {/* Asset Selection */}
+      <Text style={styles.sectionLabel}>Select Asset</Text>
       <TouchableOpacity
         style={styles.chainSelectBtn}
         onPress={() => setShowChainModal(true)}
@@ -263,9 +274,7 @@ export default function TransferScreen({ navigation }) {
             style={[
               styles.chainIcon,
               {
-                backgroundColor: `${
-                  SUPPORTED_CHAINS.find((c) => c.id === selectedChain)?.color
-                }20`,
+                backgroundColor: `${selectedAsset.color}20`,
               },
             ]}
           >
@@ -273,16 +282,20 @@ export default function TransferScreen({ navigation }) {
               style={[
                 styles.chainSymbol,
                 {
-                  color: SUPPORTED_CHAINS.find((c) => c.id === selectedChain)?.color,
+                  color: selectedAsset.color,
                 },
               ]}
             >
-              {SUPPORTED_CHAINS.find((c) => c.id === selectedChain)?.symbol.charAt(0)}
+              {selectedAsset.symbol.charAt(0)}
             </Text>
           </View>
-          <Text style={styles.selectedChainName}>
-            {SUPPORTED_CHAINS.find((c) => c.id === selectedChain)?.name}
-          </Text>
+          <View>
+            <Text style={styles.selectedChainName}>{selectedAsset.name}</Text>
+            <Text style={styles.selectedChainMeta}>
+              {selectedAsset.symbol}
+              {selectedAsset.chainId ? ` • ${selectedAsset.chainId}` : ' • Internal wallet'}
+            </Text>
+          </View>
         </View>
         <Ionicons name="chevron-down" size={20} color="#666" />
       </TouchableOpacity>
@@ -404,9 +417,9 @@ export default function TransferScreen({ navigation }) {
         </View>
 
         <View style={styles.confirmRow}>
-          <Text style={styles.confirmLabel}>Chain</Text>
+          <Text style={styles.confirmLabel}>Asset</Text>
           <Text style={styles.confirmValue}>
-            {SUPPORTED_CHAINS.find((c) => c.id === selectedChain)?.name}
+            {selectedAsset.name}
           </Text>
         </View>
 
@@ -418,8 +431,10 @@ export default function TransferScreen({ navigation }) {
         </View>
 
         <View style={styles.confirmRow}>
-          <Text style={styles.confirmLabel}>Network Fee</Text>
-          <Text style={styles.confirmValue}>~0.001 {getTokenSymbol()}</Text>
+          <Text style={styles.confirmLabel}>{recipientType === 'address' ? 'Network Fee' : 'Transfer Fee'}</Text>
+          <Text style={styles.confirmValue}>
+            {recipientType === 'address' ? `~0.001 ${getTokenSymbol()}` : `Included in app estimate`}
+          </Text>
         </View>
 
         {note && (
@@ -434,7 +449,9 @@ export default function TransferScreen({ navigation }) {
         <View style={styles.confirmRow}>
           <Text style={styles.confirmLabelTotal}>Total</Text>
           <Text style={styles.confirmValueTotal}>
-            {(parseFloat(amount) + 0.001).toFixed(4)} {getTokenSymbol()}
+            {recipientType === 'address'
+              ? `${(parseFloat(amount) + 0.001).toFixed(4)} ${getTokenSymbol()}`
+              : `${parseFloat(amount).toFixed(getTokenSymbol() === 'NGN' ? 0 : 4)} ${getTokenSymbol()}`}
           </Text>
         </View>
       </View>
@@ -497,18 +514,18 @@ export default function TransferScreen({ navigation }) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Chain</Text>
+              <Text style={styles.modalTitle}>Select Asset</Text>
               <TouchableOpacity onPress={() => setShowChainModal(false)}>
                 <Ionicons name="close" size={24} color="#666" />
               </TouchableOpacity>
             </View>
             <ScrollView showsVerticalScrollIndicator={false}>
-              {SUPPORTED_CHAINS.map((chain) => (
+              {availableAssets.map((asset) => (
                 <TouchableOpacity
-                  key={chain.id}
+                  key={asset.id}
                   style={styles.chainItem}
                   onPress={() => {
-                    setSelectedChain(chain.id);
+                    setSelectedAsset(asset);
                     setShowChainModal(false);
                   }}
                 >
@@ -516,19 +533,22 @@ export default function TransferScreen({ navigation }) {
                     <View
                       style={[
                         styles.chainItemIcon,
-                        { backgroundColor: `${chain.color}20` },
+                        { backgroundColor: `${asset.color}20` },
                       ]}
                     >
-                      <Text style={[styles.chainItemSymbol, { color: chain.color }]}>
-                        {chain.symbol.charAt(0)}
+                      <Text style={[styles.chainItemSymbol, { color: asset.color }]}>
+                        {asset.symbol.charAt(0)}
                       </Text>
                     </View>
                     <View>
-                      <Text style={styles.chainItemName}>{chain.name}</Text>
-                      <Text style={styles.chainItemSymbolText}>{chain.symbol}</Text>
+                      <Text style={styles.chainItemName}>{asset.name}</Text>
+                      <Text style={styles.chainItemSymbolText}>
+                        {asset.symbol}
+                        {asset.chainId ? ` • ${asset.chainId}` : ' • internal'}
+                      </Text>
                     </View>
                   </View>
-                  {selectedChain === chain.id && (
+                  {selectedAsset.id === asset.id && (
                     <Ionicons name="checkmark" size={20} color="#f59e0b" />
                   )}
                 </TouchableOpacity>
@@ -567,7 +587,7 @@ export default function TransferScreen({ navigation }) {
             <TouchableOpacity
               style={styles.pinConfirmBtn}
               onPress={confirmTransfer}
-              disabled={pin.length !== 6 || isSubmitting}
+              disabled={pin.length < 4 || pin.length > 6 || isSubmitting}
             >
               {isSubmitting ? (
                 <ActivityIndicator size="small" color="#0a0a0f" />
@@ -772,6 +792,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#fff',
     fontWeight: '500',
+  },
+  selectedChainMeta: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 2,
   },
   continueBtn: {
     backgroundColor: '#f59e0b',

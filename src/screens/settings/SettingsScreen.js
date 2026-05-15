@@ -20,6 +20,7 @@ const buildMenu = (colors) => [
     section: 'Account',
     items: [
       { id: 'profile', icon: 'person-outline', title: 'Profile', subtitle: 'Personal details and KYC', color: colors.accent },
+      { id: 'kyc', icon: 'shield-checkmark-outline', title: 'KYC Verification', subtitle: 'Complete identity verification', color: colors.success },
       { id: 'username', icon: 'at-outline', title: 'Username', subtitle: 'Set username for transfers', color: colors.primary },
       { id: 'security', icon: 'shield-checkmark-outline', title: 'Security', subtitle: 'PIN, biometric, and protection', color: colors.success },
       { id: 'keys', icon: 'key-outline', title: 'Key Management', subtitle: 'Export recovery phrase and keys', color: colors.accent }
@@ -60,6 +61,9 @@ export default function SettingsScreen({ navigation }) {
         break;
       case 'username':
         navigation.navigate('UsernameSettings');
+        break;
+      case 'kyc':
+        navigation.navigate('Kyc');
         break;
       case 'security':
         navigation.navigate('SecuritySettings');
@@ -116,7 +120,11 @@ export default function SettingsScreen({ navigation }) {
         <Text style={styles.headerSubtitle}>Theme: {themeMode}</Text>
       </LinearGradient>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.profileCard}>
           <TouchableOpacity style={styles.profileContent} onPress={() => handleMenuPress('profile')}>
             <View style={styles.avatar}>
@@ -133,7 +141,7 @@ export default function SettingsScreen({ navigation }) {
               <Text style={styles.profileEmail}>{user?.email || ''}</Text>
               <View style={styles.profileMeta}>
                 <Text style={styles.profileMetaText}>
-                  KYC {user?.kycVerified ? 'verified' : `level ${user?.kycLevel || 0}`}
+                  KYC {user?.kycVerified ? 'verified' : 'pending'}
                 </Text>
               </View>
             </View>
@@ -224,6 +232,10 @@ const createStyles = (colors) =>
     },
     scrollView: {
       flex: 1
+    },
+    content: {
+      flexGrow: 1,
+      paddingBottom: 120
     },
     profileCard: {
       backgroundColor: colors.surface,

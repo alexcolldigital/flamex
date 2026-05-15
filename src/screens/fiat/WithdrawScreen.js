@@ -337,8 +337,10 @@ const createStyles = (colors) =>
       flex: 1
     },
     content: {
+      flexGrow: 1,
       padding: 16,
-      gap: 16
+      gap: 16,
+      paddingBottom: 120
     },
     segmented: {
       flexDirection: 'row',

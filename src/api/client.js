@@ -89,7 +89,9 @@ export const transferAPI = {
 
 export const depositAPI = {
   getAddress: (chainId) => apiClient.get(`/deposit/address/${chainId}`),
-  createNgnDeposit: (amount) => apiClient.post('/deposit/ngn', { amount })
+  createNgnDeposit: (amount, method = 'checkout') => apiClient.post('/deposit/ngn', { amount, method }),
+  verifyNgnDeposit: (reference, transactionId) =>
+    apiClient.post('/deposit/verify', { reference, transactionId })
 };
 
 export const withdrawalAPI = {
@@ -145,6 +147,7 @@ export const p2pAPI = {
   markPaid: (orderId, data) => apiClient.post(`/p2p/orders/${orderId}/mark-paid`, data),
   confirmPayment: (orderId, data) => apiClient.post(`/p2p/orders/${orderId}/confirm-payment`, data),
   cancelOrder: (orderId, data) => apiClient.post(`/p2p/orders/${orderId}/cancel`, data),
+  sendOrderMessage: (orderId, message) => apiClient.post(`/p2p/orders/${orderId}/message`, { message }),
   openDispute: (orderId, data) => apiClient.post(`/p2p/orders/${orderId}/dispute`, data),
   getDisputes: (params = {}) => apiClient.get('/p2p/disputes', { params }),
   sendDisputeMessage: (disputeId, message) => apiClient.post(`/p2p/disputes/${disputeId}/message`, { message }),

@@ -149,6 +149,7 @@ export default function WalletScreen({ navigation }) {
       </View>
 
       <ScrollView
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
@@ -411,6 +412,10 @@ const createStyles = (colors) =>
     },
     content: {
       padding: 20
+    },
+    scrollContent: {
+      flexGrow: 1,
+      paddingBottom: 120
     },
     totalCard: {
       backgroundColor: colors.surface,

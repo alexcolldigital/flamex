@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
-    "start": "expo start",
+    "start": "serve dist --single",
+    "expo": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
@@ -59,6 +60,7 @@
     "react-native-url-polyfill": "^3.0.0",
     "react-native-vector-icons": "^10.3.0",
     "react-native-web": "~0.21.2",
+    "serve": "^14.2.1",
     "stream-browserify": "^3.0.0",
     "stream-http": "^3.2.0",
     "text-encoding": "^0.7.0",

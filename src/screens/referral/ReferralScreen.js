@@ -353,6 +353,7 @@ export default function ReferralScreen({ navigation }) {
       {/* Content */}
       <ScrollView
         style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#f59e0b" />
         }
@@ -416,6 +417,10 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 120,
   },
   tabContent: {
     padding: 16,

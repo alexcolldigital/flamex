@@ -31,6 +31,7 @@ import ProfileDetailsScreen from '../screens/settings/ProfileDetailsScreen';
 import PreferencesScreen from '../screens/settings/PreferencesScreen';
 import NotificationSettingsScreen from '../screens/settings/NotificationSettingsScreen';
 import InfoDetailsScreen from '../screens/settings/InfoDetailsScreen';
+import KycScreen from '../screens/KycScreen';
 
 // Additional Screens
 import TransactionDetailsScreen from '../screens/wallet/TransactionDetailsScreen';
@@ -135,6 +136,7 @@ const MainStackNavigator = () => {
       <Stack.Screen name="Transfer" component={TransferScreen} />
       <Stack.Screen name="Card" component={CardScreen} />
       <Stack.Screen name="ProfileDetails" component={ProfileDetailsScreen} />
+      <Stack.Screen name="Kyc" component={KycScreen} />
       <Stack.Screen name="Preferences" component={PreferencesScreen} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
       <Stack.Screen name="InfoDetails" component={InfoDetailsScreen} />

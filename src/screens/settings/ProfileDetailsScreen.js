@@ -15,16 +15,13 @@ import { useAuthStore } from '../../store/authStore';
 import { useAppTheme } from '../../theme/ThemeProvider';
 
 export default function ProfileDetailsScreen({ navigation }) {
-  const { user, updateProfile, submitKyc } = useAuthStore();
+  const { user, updateProfile } = useAuthStore();
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const [firstName, setFirstName] = useState(user?.firstName || '');
   const [lastName, setLastName] = useState(user?.lastName || '');
-  const [bvn, setBvn] = useState(user?.bvn || '');
-  const [nin, setNin] = useState(user?.nin || '');
   const [isSaving, setIsSaving] = useState(false);
-  const [isSubmittingKyc, setIsSubmittingKyc] = useState(false);
 
   const handleSaveProfile = async () => {
     setIsSaving(true);
@@ -35,23 +32,6 @@ export default function ProfileDetailsScreen({ navigation }) {
       Alert.alert('Profile updated', 'Your profile details were saved successfully.');
     } else {
       Alert.alert('Update failed', result.error);
-    }
-  };
-
-  const handleSubmitKyc = async () => {
-    if (!bvn && !nin) {
-      Alert.alert('KYC required', 'Enter your BVN or NIN to continue.');
-      return;
-    }
-
-    setIsSubmittingKyc(true);
-    const result = await submitKyc({ bvn, nin });
-    setIsSubmittingKyc(false);
-
-    if (result.success) {
-      Alert.alert('KYC updated', result.message);
-    } else {
-      Alert.alert('KYC failed', result.error);
     }
   };
 
@@ -114,49 +94,21 @@ export default function ProfileDetailsScreen({ navigation }) {
           <View style={styles.statusRow}>
             <View>
               <Text style={styles.sectionTitle}>KYC</Text>
-              <Text style={styles.statusText}>
-                {user?.kycVerified ? 'Verified' : `Level ${user?.kycLevel || 0}`}
-              </Text>
-            </View>
-            <View style={[styles.badge, { backgroundColor: user?.kycVerified ? colors.successSoft : colors.primarySoft }]}>
-              <Text style={[styles.badgeText, { color: user?.kycVerified ? colors.success : colors.primary }]}>
-                {user?.kycVerified ? 'Verified' : 'Pending'}
-              </Text>
+              <Text style={styles.statusText}>{user?.kycVerified ? 'Verified' : 'Pending'}</Text>
             </View>
           </View>
 
           <Text style={styles.label}>BVN</Text>
-          <TextInput
-            style={styles.input}
-            value={bvn}
-            onChangeText={setBvn}
-            placeholder="11-digit BVN"
-            placeholderTextColor={colors.textMuted}
-            keyboardType="number-pad"
-            maxLength={11}
-          />
+          <Text style={[styles.input, styles.readOnlyInput]}>{user?.bvn || 'Not provided'}</Text>
 
           <Text style={styles.label}>NIN</Text>
-          <TextInput
-            style={styles.input}
-            value={nin}
-            onChangeText={setNin}
-            placeholder="11-digit NIN"
-            placeholderTextColor={colors.textMuted}
-            keyboardType="number-pad"
-            maxLength={11}
-          />
+          <Text style={[styles.input, styles.readOnlyInput]}>{user?.nin || 'Not provided'}</Text>
 
           <TouchableOpacity
             style={styles.primaryButton}
-            onPress={handleSubmitKyc}
-            disabled={isSubmittingKyc}
+            onPress={() => navigation.navigate('Kyc')}
           >
-            {isSubmittingKyc ? (
-              <ActivityIndicator size="small" color={colors.black} />
-            ) : (
-              <Text style={styles.primaryButtonText}>Submit KYC</Text>
-            )}
+            <Text style={styles.primaryButtonText}>Complete KYC</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -198,8 +150,10 @@ const createStyles = (colors) =>
       flex: 1
     },
     content: {
+      flexGrow: 1,
       padding: 16,
-      gap: 16
+      gap: 16,
+      paddingBottom: 120
     },
     card: {
       backgroundColor: colors.surface,

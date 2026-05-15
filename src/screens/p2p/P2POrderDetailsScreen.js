@@ -25,6 +25,7 @@ export default function P2POrderDetailsScreen({ navigation, route }) {
   const [proofNote, setProofNote] = useState('');
   const [proofUrl, setProofUrl] = useState('');
   const [releaseNote, setReleaseNote] = useState('');
+  const [cancelReason, setCancelReason] = useState('');
   const [disputeReason, setDisputeReason] = useState('');
   const [disputeNote, setDisputeNote] = useState('');
   const [disputeUrl, setDisputeUrl] = useState('');
@@ -33,9 +34,10 @@ export default function P2POrderDetailsScreen({ navigation, route }) {
   const [loading, setLoading] = useState(false);
 
   const loadOrder = async () => {
-    if (!route.params?.orderId) return;
+    const targetOrderId = route.params?.orderId || order?.id;
+    if (!targetOrderId) return;
     try {
-      const response = await p2pAPI.getOrder(route.params.orderId);
+      const response = await p2pAPI.getOrder(targetOrderId);
       setOrder(response.data.order);
     } catch (error) {
       console.log('Load P2P order error:', error);
@@ -96,7 +98,7 @@ export default function P2POrderDetailsScreen({ navigation, route }) {
     if (!order) return;
     setLoading(true);
     try {
-      const response = await p2pAPI.cancelOrder(order.id, { reason: releaseNote || undefined });
+      const response = await p2pAPI.cancelOrder(order.id, { reason: cancelReason || undefined });
       setOrder(response.data.order);
       Alert.alert('Order cancelled', 'Escrow has been returned.');
     } catch (error) {
@@ -127,11 +129,25 @@ export default function P2POrderDetailsScreen({ navigation, route }) {
     }
   };
 
-  const sendMessage = async () => {
-    if (!order?.dispute?.id || !chatMessage) return;
+  const sendTradeMessage = async () => {
+    if (!order?.id || !chatMessage.trim()) return;
     setLoading(true);
     try {
-      await p2pAPI.sendDisputeMessage(order.dispute.id, chatMessage);
+      const response = await p2pAPI.sendOrderMessage(order.id, chatMessage.trim());
+      setOrder(response.data.order);
+      setChatMessage('');
+    } catch (error) {
+      Alert.alert('Message failed', error.response?.data?.message || 'Unable to send trade message.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sendDisputeMessage = async () => {
+    if (!order?.dispute?.id || !chatMessage.trim()) return;
+    setLoading(true);
+    try {
+      await p2pAPI.sendDisputeMessage(order.dispute.id, chatMessage.trim());
       setChatMessage('');
       await loadOrder();
     } catch (error) {
@@ -165,17 +181,28 @@ export default function P2POrderDetailsScreen({ navigation, route }) {
         <View style={styles.placeholder} />
       </LinearGradient>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         {offer && !order ? (
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Offer details</Text>
             <Text style={styles.bodyText}>
               {offer.side === 'sell' ? 'Seller' : 'Buyer'} rate {p2pMoney(offer.price)}/{offer.asset}
             </Text>
+            <Text style={styles.bodyText}>Payment methods: {(offer.paymentMethods || ['bank_transfer']).join(', ')}</Text>
+            <Text style={styles.bodyText}>Region: {offer.region || 'NG'}</Text>
             <Text style={styles.bodyText}>
               Range {p2pAmount(offer.minOrderAmount, 6)} - {p2pAmount(offer.maxOrderAmount, 6)} {offer.asset}
             </Text>
             <Text style={styles.bodyText}>Available {p2pAmount(offer.availableAmount, 6)} {offer.asset}</Text>
+            {offer.merchant ? (
+              <Text style={styles.bodyText}>
+                Trader stats: {Number(offer.merchant.completionRate || 0).toFixed(0)}% completion • {offer.merchant.totalTrades || 0} trades
+              </Text>
+            ) : null}
             {offer.isMine ? (
               <Text style={styles.bodyText}>This is your own listing. Other users can open it and trade against it.</Text>
             ) : (
@@ -203,6 +230,9 @@ export default function P2POrderDetailsScreen({ navigation, route }) {
             <Text style={styles.bodyText}>Status: {order.status.replace(/_/g, ' ')}</Text>
             <Text style={styles.bodyText}>Buyer: {order.buyer.fullName || order.buyer.username || 'Buyer'}</Text>
             <Text style={styles.bodyText}>Seller: {order.seller.fullName || order.seller.username || 'Seller'}</Text>
+            <Text style={styles.bodyText}>Payment method: {(order.paymentMethods || ['bank_transfer']).join(', ')}</Text>
+            {order.paymentDeadlineAt ? <Text style={styles.bodyText}>Buyer must pay before: {new Date(order.paymentDeadlineAt).toLocaleString()}</Text> : null}
+            {order.releaseDeadlineAt ? <Text style={styles.bodyText}>Seller should release before: {new Date(order.releaseDeadlineAt).toLocaleString()}</Text> : null}
             {order.paymentSnapshot?.accountNumber ? (
               <View style={styles.snapshotBox}>
                 <Text style={styles.snapshotTitle}>Seller payment details</Text>
@@ -226,7 +256,7 @@ export default function P2POrderDetailsScreen({ navigation, route }) {
           </View>
         ) : null}
 
-        {order?.isSeller && ['awaiting_payment', 'payment_sent'].includes(order.status) ? (
+        {order?.isSeller && ['awaiting_release', 'payment_sent'].includes(order.status) ? (
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Seller release</Text>
             <TextInput style={styles.input} value={releaseNote} onChangeText={setReleaseNote} placeholder="Release note (optional)" placeholderTextColor={colors.textMuted} />
@@ -236,9 +266,10 @@ export default function P2POrderDetailsScreen({ navigation, route }) {
           </View>
         ) : null}
 
-        {order && ['awaiting_payment', 'payment_sent'].includes(order.status) ? (
+        {order && ['awaiting_payment', 'payment_sent', 'awaiting_release'].includes(order.status) ? (
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Risk controls</Text>
+            <TextInput style={styles.input} value={cancelReason} onChangeText={setCancelReason} placeholder="Cancel reason (optional)" placeholderTextColor={colors.textMuted} />
             <TextInput style={styles.input} value={disputeReason} onChangeText={setDisputeReason} placeholder="Dispute reason if payment is contested" placeholderTextColor={colors.textMuted} multiline />
             <TextInput style={styles.input} value={disputeNote} onChangeText={setDisputeNote} placeholder="Evidence note" placeholderTextColor={colors.textMuted} />
             <TextInput style={styles.input} value={disputeUrl} onChangeText={setDisputeUrl} placeholder="Evidence URL" placeholderTextColor={colors.textMuted} />
@@ -253,6 +284,26 @@ export default function P2POrderDetailsScreen({ navigation, route }) {
           </View>
         ) : null}
 
+        {order ? (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Trade chat</Text>
+            {(order.chat || []).map((message, index) => (
+              <View key={`${message.createdAt}-${index}`} style={styles.messageBubble}>
+                <Text style={styles.messageLabel}>{message.senderLabel || 'Message'}</Text>
+                <Text style={styles.bodyText}>{message.message}</Text>
+              </View>
+            ))}
+            {['awaiting_payment', 'payment_sent', 'awaiting_release', 'disputed'].includes(order.status) ? (
+              <>
+                <TextInput style={styles.input} value={chatMessage} onChangeText={setChatMessage} placeholder="Send a message to the counterparty" placeholderTextColor={colors.textMuted} />
+                <TouchableOpacity style={styles.secondaryButton} onPress={sendTradeMessage} disabled={loading}>
+                  <Text style={styles.secondaryButtonText}>Send trade message</Text>
+                </TouchableOpacity>
+              </>
+            ) : null}
+          </View>
+        ) : null}
+
         {order?.dispute ? (
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Dispute room</Text>
@@ -263,9 +314,9 @@ export default function P2POrderDetailsScreen({ navigation, route }) {
                 <Text style={styles.bodyText}>{message.message}</Text>
               </View>
             ))}
-            <TextInput style={styles.input} value={chatMessage} onChangeText={setChatMessage} placeholder="Send an update" placeholderTextColor={colors.textMuted} />
-            <TouchableOpacity style={styles.secondaryButton} onPress={sendMessage} disabled={loading}>
-              <Text style={styles.secondaryButtonText}>Send message</Text>
+            <TextInput style={styles.input} value={chatMessage} onChangeText={setChatMessage} placeholder="Send an update to the dispute room" placeholderTextColor={colors.textMuted} />
+            <TouchableOpacity style={styles.secondaryButton} onPress={sendDisputeMessage} disabled={loading}>
+              <Text style={styles.secondaryButtonText}>Send dispute message</Text>
             </TouchableOpacity>
 
             {order.dispute.status === 'open' ? (
@@ -296,7 +347,8 @@ const createStyles = (colors) =>
     backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
     headerTitle: { color: colors.text, fontSize: 18, fontWeight: '700' },
     placeholder: { width: 40 },
-    scrollView: { flex: 1, padding: 16 },
+    scrollView: { flex: 1 },
+    scrollContent: { padding: 16, paddingBottom: 120 },
     card: { backgroundColor: colors.surface, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: colors.border, marginBottom: 12 },
     sectionTitle: { color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 10 },
     bodyText: { color: colors.textMuted, marginBottom: 6, lineHeight: 20 },

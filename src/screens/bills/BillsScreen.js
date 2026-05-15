@@ -61,6 +61,7 @@ export default function BillsScreen({ navigation }) {
 
       <ScrollView
         style={styles.scrollView}
+        contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
@@ -161,6 +162,10 @@ const createStyles = (colors) =>
     },
     scrollView: {
       flex: 1
+    },
+    content: {
+      flexGrow: 1,
+      paddingBottom: 120
     },
     balanceCard: {
       backgroundColor: colors.surface,

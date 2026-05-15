@@ -17,30 +17,31 @@ export const useTransferStore = create((set, get) => ({
     }
   },
 
-  executeTransfer: async ({ recipient, recipientType, chain, amount, note, pin }) => {
+  executeTransfer: async ({ recipient, recipientType, chain, currency, amount, note, pin }) => {
     set({ isLoading: true, error: null });
     try {
       let response;
+      const transferCurrency = currency || chainCurrencyFor(chain);
 
       if (recipientType === 'username') {
         response = await transferAPI.sendByUsername({
           toUsername: recipient,
           amount,
-          currency: chainCurrencyFor(chain),
-          chainId: chain,
+          currency: transferCurrency,
+          ...(chain ? { chainId: chain } : {}),
           description: note,
           pin
         });
 
         get().addRecentRecipient({
           username: recipient,
-          chain,
+          currency: transferCurrency,
           timestamp: Date.now()
         });
       } else {
         response = await withdrawalAPI.withdrawCrypto({
           chainId: chain,
-          token: chainCurrencyFor(chain),
+          token: transferCurrency,
           amount,
           toAddress: recipient,
           pin

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
+  ScrollView,
   View,
   Text,
   StyleSheet,
@@ -162,7 +163,7 @@ export default function UsernameSettingsScreen({ navigation }) {
         <View style={styles.placeholder} />
       </LinearGradient>
 
-      <View style={styles.content}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {/* Info Card */}
         <View style={styles.infoCard}>
           <Ionicons name="at" size={32} color="#f59e0b" />
@@ -238,7 +239,7 @@ export default function UsernameSettingsScreen({ navigation }) {
             </Text>
           )}
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -272,8 +273,10 @@ const styles = StyleSheet.create({
   placeholder: {
     width: 40,
   },
-  content: {
+  scrollView: {
     flex: 1,
+  },
+  content: {
     padding: 16,
   },
   infoCard: {

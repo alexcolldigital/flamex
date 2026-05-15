@@ -92,8 +92,10 @@ const createStyles = (colors) =>
       flex: 1
     },
     content: {
+      flexGrow: 1,
       padding: 16,
-      gap: 12
+      gap: 12,
+      paddingBottom: 120
     },
     card: {
       backgroundColor: colors.surface,

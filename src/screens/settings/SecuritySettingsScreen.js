@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  ScrollView,
   View,
   Text,
   StyleSheet,
@@ -183,7 +184,7 @@ export default function SecuritySettingsScreen({ navigation }) {
         <View style={styles.placeholder} />
       </LinearGradient>
 
-      <View style={styles.content}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         {/* Security Status */}
         <View style={styles.statusCard}>
           <View style={styles.statusIcon}>
@@ -200,11 +201,11 @@ export default function SecuritySettingsScreen({ navigation }) {
         {/* Security Options */}
         <Text style={styles.sectionTitle}>Security Settings</Text>
         <View style={styles.optionsContainer}>
-          {SECURITY_OPTIONS.map((option, index) => (
-            <View key={option.id}>
-              {option.toggle ? (
-                <View style={styles.optionRow}>
-                  <View style={[styles.optionIcon, { backgroundColor: `${option.color}20` }]}>
+          {SECURITY_OPTIONS.map((option) => (
+            option.toggle ? (
+              <View key={option.id} style={styles.optionRow}>
+                <View style={[styles.optionIcon, { backgroundColor: `${option.color}20` }]}>
+
                     <Ionicons name={option.icon} size={22} color={option.color} />
                   </View>
                   <View style={styles.optionText}>
@@ -219,8 +220,8 @@ export default function SecuritySettingsScreen({ navigation }) {
                   />
                 </View>
               ) : (
-                <TouchableOpacity style={styles.optionRow} onPress={option.action}>
-                  <View style={[styles.optionIcon, { backgroundColor: `${option.color}20` }]}>
+                <TouchableOpacity key={option.id} style={styles.optionRow} onPress={option.action}>
+                  <View style={[styles.optionIcon, { backgroundColor: `${option.color}20` }]}> 
                     <Ionicons name={option.icon} size={22} color={option.color} />
                   </View>
                   <View style={styles.optionText}>
@@ -229,8 +230,7 @@ export default function SecuritySettingsScreen({ navigation }) {
                   </View>
                   <Ionicons name="chevron-forward" size={20} color="#666" />
                 </TouchableOpacity>
-              )}
-            </View>
+              )
           ))}
         </View>
 
@@ -249,7 +249,7 @@ export default function SecuritySettingsScreen({ navigation }) {
             </View>
           ))}
         </View>
-      </View>
+      </ScrollView>
 
       {/* Change PIN Modal */}
       <Modal
@@ -352,9 +352,13 @@ const styles = StyleSheet.create({
   placeholder: {
     width: 40,
   },
-  content: {
+  scrollView: {
     flex: 1,
+  },
+  content: {
     padding: 16,
+    flexGrow: 1,
+    paddingBottom: 120,
   },
   statusCard: {
     flexDirection: 'row',

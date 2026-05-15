@@ -1,9 +1,10 @@
 import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -22,10 +23,16 @@ export default function DepositScreen({ navigation, route }) {
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [depositDetails, setDepositDetails] = useState(null);
+  const [depositMethod, setDepositMethod] = useState('checkout');
   const [wallet, setWallet] = useState(null);
   const [selectedChain, setSelectedChain] = useState(route.params?.chainId || 'solana');
   const [cryptoAddress, setCryptoAddress] = useState(null);
   const [loadingAddress, setLoadingAddress] = useState(false);
+  const [checkoutPolling, setCheckoutPolling] = useState(false);
+  const [checkoutPollingMessage, setCheckoutPollingMessage] = useState('');
+  const initialCheckoutBalanceRef = useRef(null);
+  const checkoutPollCountRef = useRef(0);
+  const checkoutTimerRef = useRef(null);
 
   const loadWallet = async () => {
     try {
@@ -48,9 +55,30 @@ export default function DepositScreen({ navigation, route }) {
     }
   };
 
+  const refreshWallet = async () => {
+    try {
+      const response = await walletAPI.getWallet();
+      setWallet(response.data);
+      return response.data;
+    } catch (error) {
+      console.log('Refresh wallet error:', error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     loadWallet();
   }, []);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (depositDetails?.method === 'checkout') {
+        refreshWallet();
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, depositDetails]);
 
   useEffect(() => {
     if (mode === 'crypto') {
@@ -66,12 +94,94 @@ export default function DepositScreen({ navigation, route }) {
 
     setLoading(true);
     try {
-      const response = await depositAPI.createNgnDeposit(numericAmount);
+      const response = await depositAPI.createNgnDeposit(numericAmount, depositMethod);
       setDepositDetails(response.data);
     } catch (error) {
       console.log('Deposit error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const stopCheckoutPolling = () => {
+    setCheckoutPolling(false);
+    if (checkoutTimerRef.current) {
+      clearInterval(checkoutTimerRef.current);
+      checkoutTimerRef.current = null;
+    }
+    checkoutPollCountRef.current = 0;
+    setCheckoutPollingMessage('');
+  };
+
+  const startCheckoutPolling = () => {
+    if (depositDetails?.method !== 'checkout') {
+      return;
+    }
+
+    initialCheckoutBalanceRef.current = wallet?.balances?.NGN ?? 0;
+    checkoutPollCountRef.current = 0;
+    setCheckoutPollingMessage('Waiting for payment confirmation...');
+    setCheckoutPolling(true);
+  };
+
+  useEffect(() => {
+    if (!checkoutPolling || depositDetails?.method !== 'checkout') {
+      stopCheckoutPolling();
+      return;
+    }
+
+    if (checkoutTimerRef.current) {
+      clearInterval(checkoutTimerRef.current);
+    }
+
+    checkoutTimerRef.current = setInterval(async () => {
+      checkoutPollCountRef.current += 1;
+      if (checkoutPollCountRef.current > 12) {
+        setCheckoutPollingMessage('Still waiting for confirmation. You can refresh manually.');
+        stopCheckoutPolling();
+        return;
+      }
+
+      try {
+        if (depositDetails?.reference) {
+          await depositAPI.verifyNgnDeposit(depositDetails.reference);
+        }
+
+        const updatedWallet = await refreshWallet();
+        if (!updatedWallet) {
+          return;
+        }
+
+        const oldBalance = initialCheckoutBalanceRef.current ?? 0;
+        const newBalance = updatedWallet.balances?.NGN ?? oldBalance;
+        if (newBalance > oldBalance) {
+          setCheckoutPollingMessage('Payment confirmed. Balance has been updated.');
+          setDepositDetails(null);
+          stopCheckoutPolling();
+        }
+      } catch (error) {
+        console.log('Checkout polling error:', error);
+        if (error.response?.status >= 500) {
+          stopCheckoutPolling();
+        }
+      }
+    }, 5000);
+
+    return () => {
+      if (checkoutTimerRef.current) {
+        clearInterval(checkoutTimerRef.current);
+      }
+    };
+  }, [checkoutPolling, depositDetails]);
+
+  const openCheckout = async (url) => {
+    if (!url) return;
+    const supported = await Linking.canOpenURL(url);
+    if (supported) {
+      await Linking.openURL(url);
+      startCheckoutPolling();
+    } else {
+      console.log('Cannot open checkout URL:', url);
     }
   };
 
@@ -115,7 +225,26 @@ export default function DepositScreen({ navigation, route }) {
         {mode === 'fiat' ? (
           <>
             <View style={styles.card}>
-              <Text style={styles.sectionTitle}>Create NGN transfer instructions</Text>
+              <Text style={styles.sectionTitle}>Choose deposit method</Text>
+              <View style={styles.methodRow}>
+                {['checkout', 'virtual_account'].map((item) => (
+                  <TouchableOpacity
+                    key={item}
+                    style={[styles.methodChip, depositMethod === item && styles.methodChipActive]}
+                    onPress={() => setDepositMethod(item)}
+                  >
+                    <Text style={[styles.methodText, depositMethod === item && styles.methodTextActive]}>
+                      {item === 'checkout' ? 'Checkout' : 'Bank Transfer'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>
+                {depositMethod === 'checkout' ? 'Create NGN checkout payment' : 'Create NGN transfer instructions'}
+              </Text>
               <TextInput
                 style={styles.input}
                 value={amount}
@@ -129,35 +258,62 @@ export default function DepositScreen({ navigation, route }) {
                 {loading ? (
                   <ActivityIndicator size="small" color={colors.black} />
                 ) : (
-                  <Text style={styles.primaryButtonText}>Generate bank details</Text>
+                  <Text style={styles.primaryButtonText}>
+                    {depositMethod === 'checkout' ? 'Generate payment link' : 'Generate bank details'}
+                  </Text>
                 )}
               </TouchableOpacity>
             </View>
 
             {depositDetails ? (
               <View style={styles.card}>
-                <Text style={styles.sectionTitle}>Transfer these details</Text>
-                {[
-                  ['Bank', depositDetails.bankDetails?.bankName],
-                  ['Account number', depositDetails.bankDetails?.accountNumber],
-                  ['Account name', depositDetails.bankDetails?.accountName],
-                  ['Reference', depositDetails.reference],
-                  ['Amount', currencyFormatter(depositDetails.amount || 0)]
-                ].map(([label, value]) => (
-                  <View key={label} style={styles.detailRow}>
-                    <View>
-                      <Text style={styles.detailLabel}>{label}</Text>
-                      <Text style={styles.detailValue}>{value}</Text>
-                    </View>
-                    <TouchableOpacity onPress={() => copyValue(value)}>
-                      <Ionicons name="copy-outline" size={18} color={colors.primary} />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-
-                <Text style={styles.hintText}>
-                  Complete the transfer before {new Date(depositDetails.expiresAt).toLocaleTimeString()} to keep the reference active.
+                <Text style={styles.sectionTitle}>
+                  {depositDetails.method === 'checkout' ? 'Open checkout page' : 'Transfer these details'}
                 </Text>
+
+                {depositDetails.method === 'checkout' ? (
+                  <>
+                    <TouchableOpacity
+                      style={styles.primaryButton}
+                      onPress={() => openCheckout(depositDetails.checkoutUrl)}
+                    >
+                      <Text style={styles.primaryButtonText}>Open payment page</Text>
+                    </TouchableOpacity>
+                    <Text style={styles.detailValue}>{depositDetails.checkoutUrl}</Text>
+                    <Text style={styles.hintText}>
+                      Use this link to complete your deposit. The payment will be credited once Flutterwave confirms the transaction.
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    {[
+                      ['Bank', depositDetails.bankDetails?.bankName],
+                      ['Account number', depositDetails.bankDetails?.accountNumber],
+                      ['Account name', depositDetails.bankDetails?.accountName],
+                      ['Reference', depositDetails.reference],
+                      ['Amount', currencyFormatter(depositDetails.amount || 0)]
+                    ].map(([label, value]) => (
+                      <View key={label} style={styles.detailRow}>
+                        <View>
+                          <Text style={styles.detailLabel}>{label}</Text>
+                          <Text style={styles.detailValue}>{value}</Text>
+                        </View>
+                        <TouchableOpacity onPress={() => copyValue(value)}>
+                          <Ionicons name="copy-outline" size={18} color={colors.primary} />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                    <Text style={styles.hintText}>
+                      Complete the transfer before {new Date(depositDetails.expiresAt).toLocaleTimeString()} to keep the reference active.
+                    </Text>
+                  </>
+                )}
+              </View>
+            ) : null}
+            {checkoutPolling ? (
+              <View style={styles.card}>
+                <Text style={styles.sectionTitle}>Payment confirmation</Text>
+                <Text style={styles.hintText}>{checkoutPollingMessage}</Text>
               </View>
             ) : null}
           </>
@@ -237,8 +393,10 @@ const createStyles = (colors) =>
       flex: 1
     },
     content: {
+      flexGrow: 1,
       padding: 16,
-      gap: 16
+      gap: 16,
+      paddingBottom: 120
     },
     segmented: {
       flexDirection: 'row',
@@ -332,6 +490,31 @@ const createStyles = (colors) =>
       color: colors.textMuted,
       lineHeight: 20,
       marginTop: 14
+    },
+    methodRow: {
+      flexDirection: 'row',
+      gap: 10
+    },
+    methodChip: {
+      flex: 1,
+      backgroundColor: colors.cardAlt,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      alignItems: 'center'
+    },
+    methodChipActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary
+    },
+    methodText: {
+      color: colors.text,
+      fontWeight: '600'
+    },
+    methodTextActive: {
+      color: colors.black
     },
     chainRow: {
       flexDirection: 'row',

@@ -97,6 +97,7 @@ export default function HomeScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
@@ -124,7 +125,7 @@ export default function HomeScreen({ navigation }) {
             </View>
             <View style={styles.statBox}>
               <Text style={styles.statLabel}>KYC</Text>
-              <Text style={styles.statValue}>{user?.kycVerified ? 'Verified' : `Level ${user?.kycLevel || 0}`}</Text>
+              <Text style={styles.statValue}>{user?.kycVerified ? 'Verified' : 'Pending'}</Text>
             </View>
           </View>
         </View>
@@ -242,6 +243,10 @@ const createStyles = (colors) =>
     container: {
       flex: 1,
       backgroundColor: colors.background
+    },
+    scrollContent: {
+      flexGrow: 1,
+      paddingBottom: 120
     },
     header: {
       flexDirection: 'row',

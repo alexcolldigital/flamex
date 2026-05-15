@@ -96,6 +96,10 @@ export default function P2PScreen({ navigation }) {
         <Text style={styles.metricValue}>{p2pMoney(offer.price)}/{offer.asset}</Text>
       </View>
       <View style={styles.metricRow}>
+        <Text style={styles.metricLabel}>Payment</Text>
+        <Text style={styles.metricValue}>{(offer.paymentMethods || ['bank_transfer']).join(', ')}</Text>
+      </View>
+      <View style={styles.metricRow}>
         <Text style={styles.metricLabel}>Available</Text>
         <Text style={styles.metricValue}>{p2pAmount(offer.availableAmount, 6)} {offer.asset}</Text>
       </View>
@@ -105,6 +109,13 @@ export default function P2PScreen({ navigation }) {
           {p2pAmount(offer.minOrderAmount, 6)} - {p2pAmount(offer.maxOrderAmount, 6)} {offer.asset}
         </Text>
       </View>
+      <Text style={styles.cardSubtle}>
+        {offer.merchant?.isMerchant ? 'Approved merchant' : 'Verified trader'} • {offer.region || 'NG'} • {offer.paymentWindowMinutes} mins
+      </Text>
+      <Text style={styles.cardSubtle}>
+        Completion {Number(offer.merchant?.completionRate || 0).toFixed(0)}% • Trades {offer.merchant?.totalTrades || 0}
+      </Text>
+      {offer.merchantOnly ? <Text style={styles.merchantOnlyText}>Merchant offer</Text> : null}
 
       <TouchableOpacity
         style={styles.primaryButton}
@@ -141,6 +152,12 @@ export default function P2PScreen({ navigation }) {
       <Text style={styles.cardSubtle}>
         {order.isBuyer ? 'You are buying crypto' : 'You are selling crypto'}
       </Text>
+      {order.paymentDeadlineAt ? (
+        <Text style={styles.cardSubtle}>Pay before {new Date(order.paymentDeadlineAt).toLocaleString()}</Text>
+      ) : null}
+      {order.releaseDeadlineAt ? (
+        <Text style={styles.cardSubtle}>Release expected before {new Date(order.releaseDeadlineAt).toLocaleString()}</Text>
+      ) : null}
     </TouchableOpacity>
   );
 
@@ -253,5 +270,6 @@ const createStyles = (colors) =>
     primaryButtonText: { color: colors.black, fontWeight: '700' },
     statusPill: { backgroundColor: colors.primarySoft, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
     statusText: { color: colors.primary, fontWeight: '700', textTransform: 'capitalize' },
+    merchantOnlyText: { color: colors.primary, marginTop: 8, fontWeight: '700' },
     emptyText: { color: colors.textMuted, textAlign: 'center', marginTop: 28 }
   });
