@@ -42,6 +42,7 @@ export default function CreateWalletScreen({ navigation }) {
     lastName: '',
     email: '',
     phone: '',
+    username: '',
     password: '',
     referralCode: ''
   });
@@ -86,9 +87,13 @@ export default function CreateWalletScreen({ navigation }) {
   };
 
   const handleRegister = async () => {
-    const { firstName, lastName, email, phone, password } = userData;
-    if (!firstName || !lastName || !email || !phone || !password) {
+    const { firstName, lastName, email, phone, username, password } = userData;
+    if (!firstName || !lastName || !email || !phone || !username || !password) {
       Alert.alert('Missing details', 'Fill in all account fields to continue.');
+      return;
+    }
+    if (!/^[a-zA-Z0-9_]{3,30}$/.test(username)) {
+      Alert.alert('Invalid username', 'Username must be 3-30 characters using only letters, numbers, and underscores.');
       return;
     }
 
@@ -205,6 +210,7 @@ export default function CreateWalletScreen({ navigation }) {
                 ['lastName', 'Last name'],
                 ['email', 'Email'],
                 ['phone', 'Phone'],
+                ['username', 'Username'],
                 ['password', 'Password'],
                 ['referralCode', 'Referral code (optional)']
               ].map(([key, label]) => (
@@ -216,7 +222,7 @@ export default function CreateWalletScreen({ navigation }) {
                   placeholder={label}
                   placeholderTextColor={colors.textMuted}
                   keyboardType={key === 'email' ? 'email-address' : key === 'phone' ? 'phone-pad' : 'default'}
-                  autoCapitalize={key === 'referralCode' ? 'characters' : key === 'email' ? 'none' : 'words'}
+                  autoCapitalize={key === 'referralCode' || key === 'username' || key === 'email' ? 'none' : 'words'}
                   secureTextEntry={key === 'password'}
                 />
               ))}

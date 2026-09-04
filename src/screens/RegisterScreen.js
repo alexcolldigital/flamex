@@ -21,6 +21,7 @@ export default function RegisterScreen({ navigation }) {
     lastName: '',
     email: '',
     phone: '',
+    username: '',
     password: '',
     confirmPassword: '',
   });
@@ -41,8 +42,12 @@ export default function RegisterScreen({ navigation }) {
   };
 
   const validateStep2 = () => {
-    if (!formData.email || !formData.phone) {
-      Alert.alert('Error', 'Please enter email and phone number');
+    if (!formData.email || !formData.phone || !formData.username) {
+      Alert.alert('Error', 'Please enter email, phone number, and username');
+      return false;
+    }
+    if (!/^[a-zA-Z0-9_]{3,30}$/.test(formData.username)) {
+      Alert.alert('Error', 'Username must be 3-30 characters using only letters, numbers, and underscores');
       return false;
     }
     return true;
@@ -79,6 +84,7 @@ export default function RegisterScreen({ navigation }) {
       lastName: formData.lastName,
       email: formData.email,
       phone: formData.phone,
+      username: formData.username,
       password: formData.password,
     });
     setLoading(false);
@@ -147,6 +153,18 @@ export default function RegisterScreen({ navigation }) {
                 value={formData.phone}
                 onChangeText={(text) => updateField('phone', text)}
                 keyboardType="phone-pad"
+              />
+            </View>
+            <View style={styles.inputContainer}>
+              <Icon name="at" size={20} color="#666" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="Username"
+                placeholderTextColor="#666"
+                value={formData.username}
+                onChangeText={(text) => updateField('username', text.replace(/[^a-zA-Z0-9_]/g, ''))}
+                autoCapitalize="none"
+                autoCorrect={false}
               />
             </View>
           </View>
