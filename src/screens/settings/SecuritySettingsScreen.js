@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ScrollView,
   View,
@@ -17,7 +17,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useAppTheme } from '../../theme/ThemeProvider';
 
 export default function SecuritySettingsScreen({ navigation }) {
-  const { user, setupPin, changePin, verifyPin } = useAuthStore();
+  const { user, setupPin, changePin, verifyPin, fetchPreferences, updateSecurityPreferences } = useAuthStore();
   const { colors } = useAppTheme();
   
   const [showChangePinModal, setShowChangePinModal] = useState(false);
@@ -27,9 +27,48 @@ export default function SecuritySettingsScreen({ navigation }) {
   const [pinStep, setPinStep] = useState(user?.hasTransactionPin ? 1 : 2); // 1: current, 2: new, 3: confirm
   const [isProcessing, setIsProcessing] = useState(false);
   
-  const [biometricEnabled, setBiometricEnabled] = useState(false);
+  const [biometricEnabled, setBiometricEnabled] = useState(Boolean(user?.biometricEnabled));
   const [transactionConfirmEnabled, setTransactionConfirmEnabled] = useState(true);
   const [autoLockEnabled, setAutoLockEnabled] = useState(true);
+  const [isSavingSecurity, setIsSavingSecurity] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchPreferences().then((preferences) => {
+      if (!isMounted || !preferences) return;
+      setBiometricEnabled(Boolean(preferences.biometricEnabled ?? user?.biometricEnabled));
+      setTransactionConfirmEnabled(preferences.security?.transactionConfirmation !== false);
+      setAutoLockEnabled(Number(preferences.security?.autoLockMinutes ?? 5) > 0);
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [fetchPreferences, user?.biometricEnabled]);
+
+  const updateSecurityOption = async (key, value) => {
+    const previousValue = key === 'biometricEnabled'
+      ? biometricEnabled
+      : key === 'transactionConfirmation'
+        ? transactionConfirmEnabled
+        : autoLockEnabled;
+    const setValue = key === 'biometricEnabled'
+      ? setBiometricEnabled
+      : key === 'transactionConfirmation'
+        ? setTransactionConfirmEnabled
+        : setAutoLockEnabled;
+
+    setValue(value);
+    setIsSavingSecurity(true);
+    const payload = key === 'autoLockMinutes'
+      ? { autoLockMinutes: value ? 5 : 0 }
+      : { [key]: value };
+    const result = await updateSecurityPreferences(payload);
+    setIsSavingSecurity(false);
+    if (!result.success) {
+      setValue(previousValue);
+      Alert.alert('Unable to save', result.error || 'Failed to update security settings');
+    }
+  };
 
   const handleChangePin = async () => {
     if (pinStep === 1) {
@@ -80,7 +119,7 @@ export default function SecuritySettingsScreen({ navigation }) {
             [{ text: 'OK', onPress: closePinModal }]
           );
         } else {
-          Alert.alert('Error', result.message || 'Failed to change PIN');
+          Alert.alert('Error', result.error || 'Failed to change PIN');
         }
       } catch (error) {
         Alert.alert('Error', 'Failed to change PIN');
@@ -150,7 +189,7 @@ export default function SecuritySettingsScreen({ navigation }) {
       color: '#22c55e',
       toggle: true,
       value: biometricEnabled,
-      onToggle: setBiometricEnabled,
+      onToggle: (value) => updateSecurityOption('biometricEnabled', value),
     },
     {
       id: 'transactionConfirm',
@@ -160,7 +199,7 @@ export default function SecuritySettingsScreen({ navigation }) {
       color: '#3b82f6',
       toggle: true,
       value: transactionConfirmEnabled,
-      onToggle: setTransactionConfirmEnabled,
+      onToggle: (value) => updateSecurityOption('transactionConfirmation', value),
     },
     {
       id: 'autoLock',
@@ -170,7 +209,7 @@ export default function SecuritySettingsScreen({ navigation }) {
       color: '#8b5cf6',
       toggle: true,
       value: autoLockEnabled,
-      onToggle: setAutoLockEnabled,
+      onToggle: (value) => updateSecurityOption('autoLockMinutes', value),
     },
   ];
 
@@ -195,7 +234,7 @@ export default function SecuritySettingsScreen({ navigation }) {
           <View style={styles.statusText}>
             <Text style={[styles.statusTitle, { color: colors.success }]}>Your account is secure</Text>
             <Text style={[styles.statusSubtitle, { color: colors.textMuted }]}>
-              PIN enabled • Last changed 30 days ago
+              {user?.hasTransactionPin ? 'Transaction PIN enabled' : 'Set a transaction PIN to protect transfers'}
             </Text>
           </View>
         </View>
@@ -215,6 +254,7 @@ export default function SecuritySettingsScreen({ navigation }) {
                 <Switch
                   value={option.value}
                   onValueChange={option.onToggle}
+                  disabled={isSavingSecurity}
                   trackColor={{ false: colors.border, true: option.color }}
                   thumbColor={colors.white}
                 />
