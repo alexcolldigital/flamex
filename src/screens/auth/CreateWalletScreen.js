@@ -29,7 +29,7 @@ const SUPPORTED_CHAINS = [
 ];
 
 export default function CreateWalletScreen({ navigation }) {
-  const { register } = useAuthStore();
+  const { register, checkUsernameAvailability } = useAuthStore();
   const { colors, isDark } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -37,6 +37,7 @@ export default function CreateWalletScreen({ navigation }) {
   const [mnemonic, setMnemonic] = useState('');
   const [selectedChains, setSelectedChains] = useState(['solana']);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuggestingUsername, setIsSuggestingUsername] = useState(false);
   const [userData, setUserData] = useState({
     firstName: '',
     lastName: '',
@@ -84,6 +85,26 @@ export default function CreateWalletScreen({ navigation }) {
         privateKey: wallet.privateKey
       };
     });
+  };
+
+  const suggestUsername = async () => {
+    const firstName = userData.firstName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const lastName = userData.lastName.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const base = `${firstName}${lastName}`.slice(0, 24) || 'flameuser';
+    const candidates = [base, `${base}${firstName.length + lastName.length}`, `${base}${new Date().getFullYear()}`];
+
+    setIsSuggestingUsername(true);
+    try {
+      for (const candidate of [...new Set(candidates)]) {
+        if (await checkUsernameAvailability(candidate)) {
+          setUserData((current) => ({ ...current, username: candidate }));
+          return;
+        }
+      }
+      Alert.alert('No suggestion available', 'Please enter a username manually.');
+    } finally {
+      setIsSuggestingUsername(false);
+    }
   };
 
   const handleRegister = async () => {
@@ -210,7 +231,6 @@ export default function CreateWalletScreen({ navigation }) {
                 ['lastName', 'Last name'],
                 ['email', 'Email'],
                 ['phone', 'Phone'],
-                ['username', 'Username'],
                 ['password', 'Password'],
                 ['referralCode', 'Referral code (optional)']
               ].map(([key, label]) => (
@@ -226,6 +246,36 @@ export default function CreateWalletScreen({ navigation }) {
                   secureTextEntry={key === 'password'}
                 />
               ))}
+
+              <View style={styles.usernameSection}>
+                <View style={styles.usernameHeader}>
+                  <TextInput
+                    style={[styles.input, styles.usernameInput]}
+                    value={userData.username}
+                    onChangeText={(value) => setUserData((current) => ({
+                      ...current,
+                      username: value.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase()
+                    }))}
+                    placeholder="Username"
+                    placeholderTextColor={colors.textMuted}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    maxLength={30}
+                  />
+                  <TouchableOpacity
+                    style={styles.suggestButton}
+                    onPress={suggestUsername}
+                    disabled={isSuggestingUsername || isLoading}
+                  >
+                    {isSuggestingUsername ? (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    ) : (
+                      <Text style={styles.suggestButtonText}>Suggest</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.usernameHint}>Use a suggestion or choose your own unique username.</Text>
+              </View>
 
               <TouchableOpacity style={styles.primaryButton} onPress={handleRegister} disabled={isLoading}>
                 {isLoading ? (
@@ -302,6 +352,36 @@ const createStyles = (colors) =>
       color: colors.textMuted,
       marginBottom: 20,
       lineHeight: 22
+    },
+    usernameSection: {
+      marginTop: 12
+    },
+    usernameHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8
+    },
+    usernameInput: {
+      flex: 1,
+      marginBottom: 0
+    },
+    suggestButton: {
+      borderWidth: 1,
+      borderColor: colors.primary,
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 14,
+      minWidth: 78,
+      alignItems: 'center'
+    },
+    suggestButtonText: {
+      color: colors.primary,
+      fontWeight: '700'
+    },
+    usernameHint: {
+      color: colors.textMuted,
+      fontSize: 12,
+      marginTop: 6
     },
     card: {
       backgroundColor: colors.surface,
