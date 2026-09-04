@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   Alert,
+  ScrollView,
   StyleSheet,
   Switch,
   Text,
@@ -42,7 +43,7 @@ export default function NotificationSettingsScreen({ navigation }) {
         <View style={styles.placeholder} />
       </LinearGradient>
 
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content}>
         {[
           ['email', 'Email updates'],
           ['push', 'Push notifications'],
@@ -58,7 +59,7 @@ export default function NotificationSettingsScreen({ navigation }) {
             />
           </View>
         ))}
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -95,7 +96,8 @@ const createStyles = (colors) =>
     },
     content: {
       padding: 16,
-      gap: 12
+      gap: 12,
+      paddingBottom: 120
     },
     option: {
       flexDirection: 'row',

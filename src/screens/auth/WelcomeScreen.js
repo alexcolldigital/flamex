@@ -1,80 +1,117 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
-const WelcomeScreen = ({ navigation }) => {
-  return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      <LinearGradient colors={['#0a0a0f', '#1a1a2e', '#0a0a0f']} style={styles.gradient}>
-        <View style={styles.content}>
-          {/* Logo */}
-          <View style={styles.logoSection}>
-            <LinearGradient colors={['#f59e0b', '#d97706']} style={styles.logo}>
-              <Ionicons name="flame" size={60} color="#0a0a0f" />
-            </LinearGradient>
-            <Text style={styles.title}>FlameX</Text>
-            <Text style={styles.subtitle}>Multi-Chain Crypto Wallet</Text>
-          </View>
-
-          {/* Features */}
-          <View style={styles.features}>
-            <FeatureItem icon="swap-horizontal" title="Cross-Chain Swaps" description="Swap tokens across multiple blockchains" />
-            <FeatureItem icon="people" title="Refer & Earn" description="Invite friends and earn rewards" />
-            <FeatureItem icon="shield-checkmark" title="Non-Custodial" description="You control your keys" />
-          </View>
-
-          {/* Buttons */}
-          <View style={styles.buttons}>
-            <TouchableOpacity style={styles.primaryButton} onPress={() => navigation.navigate('CreateWallet')}>
-              <LinearGradient colors={['#f59e0b', '#d97706']} style={styles.buttonGradient}>
-                <Text style={styles.primaryButtonText}>Create New Wallet</Text>
-                <Ionicons name="arrow-forward" size={20} color="#0a0a0f" />
-              </LinearGradient>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.secondaryButtonText}>I Already Have a Wallet</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </LinearGradient>
-    </SafeAreaView>
-  );
+const C = {
+  bg: '#080B12', card: '#111722', border: '#1E293B',
+  text: '#FFFFFF', muted: '#94A3B8', sub: '#475569',
+  green: '#22C55E', greenSoft: 'rgba(34,197,94,0.12)',
 };
 
-const FeatureItem = ({ icon, title, description }) => (
-  <View style={styles.featureItem}>
-    <View style={styles.featureIcon}>
-      <Ionicons name={icon} size={24} color="#f59e0b" />
-    </View>
-    <View>
-      <Text style={styles.featureTitle}>{title}</Text>
-      <Text style={styles.featureDescription}>{description}</Text>
-    </View>
-  </View>
-);
+const FEATURES = [
+  { icon: 'swap-horizontal', title: 'Cross-Chain Swaps',  desc: 'Swap tokens across multiple blockchains' },
+  { icon: 'people',          title: 'Refer & Earn',       desc: 'Invite friends and earn rewards' },
+  { icon: 'shield-checkmark', title: 'Non-Custodial',     desc: 'You control your keys, always' },
+];
+
+export default function WelcomeScreen({ navigation }) {
+  return (
+    <SafeAreaView style={styles.safe}>
+      <StatusBar barStyle="light-content" backgroundColor={C.bg} />
+      <View style={styles.content}>
+
+        {/* Logo */}
+        <View style={styles.logoSection}>
+          <View style={styles.logoRing}>
+            <View style={styles.logoInner}>
+              <Ionicons name="flame" size={44} color={C.green} />
+            </View>
+          </View>
+          <Text style={styles.title}>FlameX</Text>
+          <Text style={styles.subtitle}>Your Premium Crypto Wallet</Text>
+        </View>
+
+        {/* Features */}
+        <View style={styles.features}>
+          {FEATURES.map(f => (
+            <View key={f.title} style={styles.featureRow}>
+              <View style={styles.featureIcon}>
+                <Ionicons name={f.icon} size={20} color={C.green} />
+              </View>
+              <View style={styles.featureText}>
+                <Text style={styles.featureTitle}>{f.title}</Text>
+                <Text style={styles.featureDesc}>{f.desc}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* Buttons */}
+        <View style={styles.buttons}>
+          <TouchableOpacity style={styles.primaryBtn} onPress={() => navigation.navigate('CreateWallet')}>
+            <Text style={styles.primaryBtnText}>Create New Wallet</Text>
+            <Ionicons name="arrow-forward" size={18} color={C.bg} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.secondaryBtn} onPress={() => navigation.navigate('Login')}>
+            <Text style={styles.secondaryBtnText}>I Already Have a Wallet</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.securityRow}>
+          <Ionicons name="lock-closed" size={12} color={C.sub} />
+          <Text style={styles.securityText}>256-bit encrypted · SOC 2 compliant</Text>
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a0a0f' },
-  gradient: { flex: 1 },
-  content: { flex: 1, padding: 24, justifyContent: 'space-between' },
-  logoSection: { alignItems: 'center', marginTop: 40 },
-  logo: { width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
-  title: { fontSize: 36, fontWeight: 'bold', color: '#ffffff', marginBottom: 8 },
-  subtitle: { fontSize: 16, color: '#9ca3af' },
-  features: { marginVertical: 20 },
-  featureItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, backgroundColor: 'rgba(255,255,255,0.05)', padding: 16, borderRadius: 12 },
-  featureIcon: { width: 48, height: 48, backgroundColor: 'rgba(245, 158, 11, 0.1)', borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
-  featureTitle: { fontSize: 16, fontWeight: '600', color: '#ffffff', marginBottom: 4 },
-  featureDescription: { fontSize: 13, color: '#9ca3af' },
-  buttons: { marginBottom: 20 },
-  primaryButton: { borderRadius: 16, marginBottom: 12, overflow: 'hidden' },
-  buttonGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16 },
-  primaryButtonText: { fontSize: 16, fontWeight: '600', color: '#0a0a0f', marginRight: 8 },
-  secondaryButton: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16, paddingVertical: 16, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-  secondaryButtonText: { fontSize: 16, fontWeight: '600', color: '#ffffff' }
-});
+  safe: { flex: 1, backgroundColor: C.bg },
+  content: { flex: 1, paddingHorizontal: 24, justifyContent: 'space-between', paddingTop: 40, paddingBottom: 32 },
 
-export default WelcomeScreen;
+  logoSection: { alignItems: 'center' },
+  logoRing: {
+    width: 96, height: 96, borderRadius: 48,
+    borderWidth: 1.5, borderColor: C.green,
+    justifyContent: 'center', alignItems: 'center', marginBottom: 20,
+  },
+  logoInner: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: C.greenSoft,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  title: { fontSize: 34, fontWeight: '800', color: C.text, letterSpacing: -0.5, marginBottom: 6 },
+  subtitle: { fontSize: 15, color: C.muted },
+
+  features: { gap: 12 },
+  featureRow: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: C.card, borderRadius: 16, padding: 16,
+    borderWidth: 1, borderColor: C.border,
+  },
+  featureIcon: {
+    width: 44, height: 44, borderRadius: 12,
+    backgroundColor: C.greenSoft,
+    justifyContent: 'center', alignItems: 'center', marginRight: 14,
+  },
+  featureText: { flex: 1 },
+  featureTitle: { fontSize: 15, fontWeight: '600', color: C.text, marginBottom: 3 },
+  featureDesc: { fontSize: 13, color: C.muted },
+
+  buttons: { gap: 12 },
+  primaryBtn: {
+    backgroundColor: C.green, borderRadius: 16,
+    paddingVertical: 16, flexDirection: 'row',
+    alignItems: 'center', justifyContent: 'center', gap: 8,
+  },
+  primaryBtnText: { fontSize: 16, fontWeight: '700', color: C.bg },
+  secondaryBtn: {
+    backgroundColor: C.card, borderRadius: 16, paddingVertical: 16,
+    alignItems: 'center', borderWidth: 1, borderColor: C.border,
+  },
+  secondaryBtnText: { fontSize: 16, fontWeight: '600', color: C.text },
+
+  securityRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  securityText: { fontSize: 12, color: C.sub },
+});

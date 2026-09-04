@@ -1,13 +1,23 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, SafeAreaView, StatusBar, Alert, TextInput as RNTextInput } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import {
+  View, Text, StyleSheet, TouchableOpacity, ScrollView,
+  SafeAreaView, StatusBar, Alert, TextInput,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
 
-const LoginScreen = ({ navigation }) => {
+const C = {
+  bg: '#080B12', card: '#111722', border: '#1E293B',
+  text: '#FFFFFF', muted: '#94A3B8', sub: '#475569',
+  green: '#22C55E', greenSoft: 'rgba(34,197,94,0.12)',
+  red: '#EF4444',
+};
+
+export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [focused, setFocused] = useState(null);
   const { login, isLoading } = useAuthStore();
 
   const handleLogin = async () => {
@@ -15,83 +25,125 @@ const LoginScreen = ({ navigation }) => {
       Alert.alert('Error', 'Please enter email and password');
       return;
     }
-
     const result = await login(email, password);
-    if (!result.success) {
-      Alert.alert('Error', result.error);
-    }
+    if (!result.success) Alert.alert('Error', result.error);
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      <LinearGradient colors={['#0a0a0f', '#1a1a2e']} style={styles.gradient}>
-        <ScrollView style={styles.content}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#ffffff" />
-          </TouchableOpacity>
+    <SafeAreaView style={styles.safe}>
+      <StatusBar barStyle="light-content" backgroundColor={C.bg} />
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={22} color={C.text} />
+        </TouchableOpacity>
 
-          <View style={styles.header}>
-            <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Sign in to your wallet</Text>
-          </View>
+        <View style={styles.header}>
+          <Text style={styles.title}>Welcome Back</Text>
+          <Text style={styles.subtitle}>Sign in to your wallet</Text>
+        </View>
 
-          <View style={styles.form}>
-            <View style={styles.inputContainer}>
-              <Ionicons name="mail-outline" size={20} color="#6b7280" style={styles.inputIcon} />
-              <RNTextInput
+        <View style={styles.form}>
+          <View style={styles.fieldWrap}>
+            <Text style={styles.label}>Email</Text>
+            <View style={[styles.inputRow, focused === 'email' && styles.inputFocused]}>
+              <Ionicons name="mail-outline" size={18} color={C.sub} style={styles.inputIcon} />
+              <TextInput
                 style={styles.input}
-                placeholder="Email"
-                placeholderTextColor="#6b7280"
+                placeholder="you@example.com"
+                placeholderTextColor={C.sub}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 value={email}
                 onChangeText={setEmail}
+                onFocus={() => setFocused('email')}
+                onBlur={() => setFocused(null)}
               />
             </View>
+          </View>
 
-            <View style={styles.inputContainer}>
-              <Ionicons name="lock-closed-outline" size={20} color="#6b7280" style={styles.inputIcon} />
-              <RNTextInput
+          <View style={styles.fieldWrap}>
+            <Text style={styles.label}>Password</Text>
+            <View style={[styles.inputRow, focused === 'password' && styles.inputFocused]}>
+              <Ionicons name="lock-closed-outline" size={18} color={C.sub} style={styles.inputIcon} />
+              <TextInput
                 style={styles.input}
-                placeholder="Password"
-                placeholderTextColor="#6b7280"
+                placeholder="••••••••"
+                placeholderTextColor={C.sub}
                 secureTextEntry={!showPassword}
                 value={password}
                 onChangeText={setPassword}
+                onFocus={() => setFocused('password')}
+                onBlur={() => setFocused(null)}
               />
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={20} color="#6b7280" />
+                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color={C.sub} />
               </TouchableOpacity>
             </View>
-
-            <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={isLoading}>
-              <LinearGradient colors={['#f59e0b', '#d97706']} style={styles.loginGradient}>
-                <Text style={styles.loginText}>{isLoading ? 'Signing In...' : 'Sign In'}</Text>
-              </LinearGradient>
-            </TouchableOpacity>
           </View>
-        </ScrollView>
-      </LinearGradient>
+
+          <TouchableOpacity
+            style={[styles.loginBtn, isLoading && styles.loginBtnDisabled]}
+            onPress={handleLogin}
+            disabled={isLoading}
+            activeOpacity={0.85}
+          >
+            {isLoading
+              ? <Text style={styles.loginBtnText}>Signing In…</Text>
+              : <>
+                  <Text style={styles.loginBtnText}>Sign In</Text>
+                  <Ionicons name="arrow-forward" size={18} color={C.bg} />
+                </>
+            }
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.securityRow}>
+          <Ionicons name="shield-checkmark" size={14} color={C.green} />
+          <Text style={styles.securityText}>Secured with 256-bit encryption</Text>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a0a0f' },
-  gradient: { flex: 1 },
-  content: { flex: 1, padding: 24 },
-  backButton: { marginTop: 20, marginBottom: 20 },
-  header: { marginBottom: 40 },
-  title: { fontSize: 32, fontWeight: 'bold', color: '#ffffff', marginBottom: 8 },
-  subtitle: { fontSize: 16, color: '#9ca3af' },
-  form: { gap: 16 },
-  inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', paddingHorizontal: 16, height: 56 },
-  inputIcon: { marginRight: 12 },
-  input: { flex: 1, color: '#ffffff', fontSize: 16 },
-  loginButton: { borderRadius: 16, overflow: 'hidden', marginTop: 8 },
-  loginGradient: { paddingVertical: 16, alignItems: 'center' },
-  loginText: { color: '#0a0a0f', fontSize: 16, fontWeight: '600' }
-});
+  safe: { flex: 1, backgroundColor: C.bg },
+  scroll: { flex: 1, paddingHorizontal: 24 },
+  scrollContent: { paddingBottom: 40, flexGrow: 1 },
+  backBtn: {
+    marginTop: 20, marginBottom: 32,
+    width: 40, height: 40, borderRadius: 12,
+    backgroundColor: C.card, borderWidth: 1, borderColor: C.border,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  header: { marginBottom: 36 },
+  title: { fontSize: 30, fontWeight: '800', color: C.text, marginBottom: 6, letterSpacing: -0.3 },
+  subtitle: { fontSize: 15, color: C.muted },
 
-export default LoginScreen;
+  form: { gap: 20 },
+  fieldWrap: {},
+  label: { fontSize: 13, fontWeight: '500', color: C.muted, marginBottom: 8, letterSpacing: 0.3 },
+  inputRow: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: C.card, borderRadius: 14,
+    borderWidth: 1, borderColor: C.border,
+    paddingHorizontal: 14, height: 54,
+  },
+  inputFocused: { borderColor: C.green },
+  inputIcon: { marginRight: 10 },
+  input: { flex: 1, color: C.text, fontSize: 15 },
+
+  loginBtn: {
+    backgroundColor: C.green, borderRadius: 16, height: 54,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    marginTop: 8,
+  },
+  loginBtnDisabled: { opacity: 0.6 },
+  loginBtnText: { color: C.bg, fontSize: 16, fontWeight: '700' },
+
+  securityRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, marginTop: 32, marginBottom: 24,
+  },
+  securityText: { fontSize: 12, color: C.sub },
+});

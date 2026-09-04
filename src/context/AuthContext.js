@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../api/client';
 
 let SecureStore = null;
@@ -23,6 +24,8 @@ export const AuthProvider = ({ children }) => {
       let token = null;
       if (Platform.OS !== 'web') {
         token = await SecureStore.getItemAsync('authToken');
+      } else {
+        token = await AsyncStorage.getItem('token');
       }
       if (token) {
         const response = await authAPI.getMe();
@@ -43,6 +46,8 @@ export const AuthProvider = ({ children }) => {
       if (Platform.OS !== 'web') {
         await SecureStore.setItemAsync('authToken', token);
       }
+      await AsyncStorage.setItem('token', token);
+      await AsyncStorage.setItem('user', JSON.stringify(user));
       setUser(user);
       setIsAuthenticated(true);
       return { success: true, user };
@@ -61,6 +66,8 @@ export const AuthProvider = ({ children }) => {
       if (Platform.OS !== 'web') {
         await SecureStore.setItemAsync('authToken', token);
       }
+      await AsyncStorage.setItem('token', token);
+      await AsyncStorage.setItem('user', JSON.stringify(user));
       setUser(user);
       setIsAuthenticated(true);
       return { success: true, user };
@@ -76,6 +83,7 @@ export const AuthProvider = ({ children }) => {
     if (Platform.OS !== 'web') {
       await SecureStore.deleteItemAsync('authToken');
     }
+    await AsyncStorage.multiRemove(['token', 'user']);
     setUser(null);
     setIsAuthenticated(false);
   };

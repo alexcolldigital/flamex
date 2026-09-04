@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
+  Modal,
   ScrollView,
   StyleSheet,
   Switch,
@@ -46,13 +46,21 @@ const buildMenu = (colors) => [
 export default function SettingsScreen({ navigation }) {
   const { user, logout, updateSecurityPreferences } = useAuthStore();
   const { clearWallets } = useWalletStore();
-  const { colors, themeMode } = useAppTheme();
+  const { colors, themeMode, setThemeMode, isDark } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const menu = useMemo(() => buildMenu(colors), [colors]);
 
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isUpdatingBiometric, setIsUpdatingBiometric] = useState(false);
   const biometricEnabled = Boolean(user?.biometricEnabled);
+
+  const cycleTheme = () => {
+    const next = themeMode === 'dark' ? 'light' : themeMode === 'light' ? 'system' : 'dark';
+    setThemeMode(next);
+  };
+
+  const themeIcon = themeMode === 'dark' ? 'moon' : themeMode === 'light' ? 'sunny' : 'phone-portrait';
 
   const handleMenuPress = (id) => {
     switch (id) {
@@ -87,20 +95,13 @@ export default function SettingsScreen({ navigation }) {
     }
   };
 
-  const handleLogout = async () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Logout',
-        style: 'destructive',
-        onPress: async () => {
-          setIsLoggingOut(true);
-          await clearWallets();
-          await logout();
-          setIsLoggingOut(false);
-        }
-      }
-    ]);
+  const handleLogout = () => setShowLogoutModal(true);
+
+  const confirmLogout = async () => {
+    setShowLogoutModal(false);
+    setIsLoggingOut(true);
+    await clearWallets();
+    await logout();
   };
 
   const toggleBiometric = async (value) => {
@@ -108,16 +109,15 @@ export default function SettingsScreen({ navigation }) {
     const result = await updateSecurityPreferences({ biometricEnabled: value });
     setIsUpdatingBiometric(false);
 
-    if (!result.success) {
-      Alert.alert('Update failed', result.error);
-    }
   };
 
   return (
     <View style={styles.container}>
       <LinearGradient colors={colors.headerGradient} style={styles.header}>
         <Text style={styles.headerTitle}>Settings</Text>
-        <Text style={styles.headerSubtitle}>Theme: {themeMode}</Text>
+        <TouchableOpacity style={styles.themeToggle} onPress={cycleTheme}>
+          <Ionicons name={themeIcon} size={18} color={colors.primary} />
+        </TouchableOpacity>
       </LinearGradient>
 
       <ScrollView
@@ -206,6 +206,23 @@ export default function SettingsScreen({ navigation }) {
 
         <Text style={styles.versionText}>FlameX v1.0.0</Text>
       </ScrollView>
+
+      <Modal transparent visible={showLogoutModal} animationType="fade" onRequestClose={() => setShowLogoutModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>Logout</Text>
+            <Text style={styles.modalMessage}>Are you sure you want to logout?</Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalCancel} onPress={() => setShowLogoutModal(false)}>
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalConfirm} onPress={confirmLogout}>
+                <Text style={styles.modalConfirmText}>Logout</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -219,16 +236,21 @@ const createStyles = (colors) =>
     header: {
       paddingTop: 60,
       paddingHorizontal: 20,
-      paddingBottom: 16
+      paddingBottom: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
     },
     headerTitle: {
       fontSize: 28,
       fontWeight: '700',
       color: colors.text
     },
-    headerSubtitle: {
-      marginTop: 4,
-      color: colors.textMuted
+    themeToggle: {
+      width: 40, height: 40, borderRadius: 12,
+      backgroundColor: colors.primarySoft,
+      borderWidth: 1, borderColor: colors.primary,
+      justifyContent: 'center', alignItems: 'center',
     },
     scrollView: {
       flex: 1
@@ -255,14 +277,16 @@ const createStyles = (colors) =>
       width: 56,
       height: 56,
       borderRadius: 28,
-      backgroundColor: colors.primary,
+      backgroundColor: colors.primarySoft,
+      borderWidth: 1.5,
+      borderColor: colors.primary,
       justifyContent: 'center',
       alignItems: 'center'
     },
     avatarText: {
       fontSize: 22,
       fontWeight: '700',
-      color: colors.black
+      color: colors.primary
     },
     profileInfo: {
       flex: 1,
@@ -382,5 +406,60 @@ const createStyles = (colors) =>
       color: colors.textMuted,
       textAlign: 'center',
       marginBottom: 24
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      justifyContent: 'center',
+      alignItems: 'center'
+    },
+    modalBox: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 24,
+      marginHorizontal: 32,
+      width: '85%',
+      borderWidth: 1,
+      borderColor: colors.border
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 8
+    },
+    modalMessage: {
+      fontSize: 14,
+      color: colors.textMuted,
+      marginBottom: 24
+    },
+    modalActions: {
+      flexDirection: 'row',
+      gap: 12
+    },
+    modalCancel: {
+      flex: 1,
+      padding: 12,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: 'center'
+    },
+    modalCancelText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.text
+    },
+    modalConfirm: {
+      flex: 1,
+      padding: 12,
+      borderRadius: 10,
+      backgroundColor: colors.danger,
+      alignItems: 'center'
+    },
+    modalConfirmText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: '#fff'
     }
   });

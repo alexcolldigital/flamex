@@ -110,7 +110,7 @@ export default function AirtimeScreen({ navigation }) {
         <View style={styles.placeholder} />
       </LinearGradient>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={styles.balanceCard}>
           <Text style={styles.balanceLabel}>Available balance</Text>
           <Text style={styles.balanceValue}>N{Number(user?.balances?.NGN || 0).toLocaleString()}</Text>
@@ -260,8 +260,12 @@ const createStyles = (colors) =>
       width: 40
     },
     scrollView: {
-      flex: 1,
-      padding: 16
+      flex: 1
+    },
+    scrollContent: {
+      padding: 16,
+      paddingBottom: 60,
+      flexGrow: 1
     },
     balanceCard: {
       backgroundColor: colors.surface,

@@ -32,6 +32,7 @@ export default function P2POrderDetailsScreen({ navigation, route }) {
   const [chatMessage, setChatMessage] = useState('');
   const [resolutionNote, setResolutionNote] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const loadOrder = async () => {
     const targetOrderId = route.params?.orderId || order?.id;
@@ -55,12 +56,15 @@ export default function P2POrderDetailsScreen({ navigation, route }) {
     }
 
     setLoading(true);
+    setErrorMessage('');
     try {
       const response = await p2pAPI.createOrder(offerId, Number(amount));
       setOrder(response.data.order);
       Alert.alert('Order created', 'Crypto has been locked in escrow for this trade.');
     } catch (error) {
-      Alert.alert('Create order failed', error.response?.data?.message || 'Unable to create order.');
+      const message = error.response?.data?.message || 'Unable to create order.';
+      setErrorMessage(message);
+      Alert.alert('Create order failed', message);
     } finally {
       setLoading(false);
     }
@@ -186,6 +190,7 @@ export default function P2POrderDetailsScreen({ navigation, route }) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
         {offer && !order ? (
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Offer details</Text>
@@ -352,6 +357,7 @@ const createStyles = (colors) =>
     card: { backgroundColor: colors.surface, borderRadius: 18, padding: 16, borderWidth: 1, borderColor: colors.border, marginBottom: 12 },
     sectionTitle: { color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 10 },
     bodyText: { color: colors.textMuted, marginBottom: 6, lineHeight: 20 },
+    errorText: { color: colors.danger || '#ef4444', fontWeight: '600', marginBottom: 12 },
     snapshotBox: { marginTop: 12, backgroundColor: colors.surfaceMuted, borderRadius: 14, padding: 12 },
     snapshotTitle: { color: colors.text, fontWeight: '700', marginBottom: 8 },
     input: { backgroundColor: colors.input, borderWidth: 1, borderColor: colors.border, borderRadius: 14, color: colors.text, paddingHorizontal: 14, paddingVertical: 12, marginTop: 10 },

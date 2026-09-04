@@ -1,13 +1,63 @@
 import './shim';
 import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuthStore } from './src/store/authStore';
 import { useWalletStore } from './src/store/walletStore';
 import AppNavigator from './src/navigation/AppNavigator';
 import { ThemeProvider, useAppTheme } from './src/theme/ThemeProvider';
+
+const linking = {
+  prefixes: ['/', 'flamex://'],
+  config: {
+    screens: {
+      Auth: {
+        screens: {
+          Welcome: '',
+          Login: 'login',
+          CreateWallet: 'create-wallet'
+        }
+      },
+      Main: {
+        screens: {
+          MainTabs: {
+            screens: {
+              Home: 'home',
+              Wallet: 'wallet',
+              Swap: 'swap',
+              Referral: 'referral',
+              Settings: 'settings'
+            }
+          },
+          Deposit: 'deposit',
+          Withdraw: 'withdraw',
+          Transfer: 'transfer',
+          ProfileDetails: 'settings/profile',
+          Kyc: 'settings/kyc',
+          Preferences: 'settings/preferences',
+          NotificationSettings: 'settings/notifications',
+          InfoDetails: 'settings/info',
+          KeyManagement: 'settings/keys',
+          UsernameSettings: 'settings/username',
+          SecuritySettings: 'settings/security',
+          TransactionDetails: 'wallet/transaction',
+          Notifications: 'notifications',
+          Bills: 'bills',
+          Airtime: 'bills/airtime',
+          Data: 'bills/data',
+          Electricity: 'bills/electricity',
+          Cable: 'bills/cable',
+          GiftCards: 'bills/gift-cards',
+          P2P: 'p2p',
+          P2PCreateOffer: 'p2p/create-offer',
+          P2POrderDetails: 'p2p/order'
+        }
+      }
+    }
+  }
+};
 
 // Loading Screen Component
 function LoadingScreen() {
@@ -22,17 +72,14 @@ function LoadingScreen() {
 // Main App Component
 function AppContent() {
   const { isAuthenticated, isLoading: authLoading, initializeAuth } = useAuthStore();
-  const { initializeWallets, isLoading: walletLoading } = useWalletStore();
+  const { initializeWallets } = useWalletStore();
   const [isInitializing, setIsInitializing] = useState(true);
   const { colors, isDark } = useAppTheme();
 
   useEffect(() => {
     const init = async () => {
       try {
-        // Initialize auth state
         await initializeAuth();
-        
-        // If authenticated, initialize wallets
         const authState = useAuthStore.getState();
         if (authState.isAuthenticated) {
           await initializeWallets();
@@ -47,12 +94,13 @@ function AppContent() {
     init();
   }, []);
 
-  if (isInitializing || authLoading || walletLoading) {
+  if (isInitializing || authLoading) {
     return <LoadingScreen />;
   }
 
   return (
     <NavigationContainer
+      linking={linking}
       theme={{
         dark: isDark,
         colors: {
@@ -77,6 +125,20 @@ function AppContent() {
 }
 
 export default function App() {
+  useEffect(() => {
+    if (Platform.OS !== 'web') return undefined;
+
+    document.documentElement.style.overflowY = 'auto';
+    document.body.style.overflowY = 'auto';
+    document.body.style.minHeight = '100%';
+
+    return () => {
+      document.documentElement.style.overflowY = '';
+      document.body.style.overflowY = '';
+      document.body.style.minHeight = '';
+    };
+  }, []);
+
   return (
     <SafeAreaProvider>
       <ThemeProvider>

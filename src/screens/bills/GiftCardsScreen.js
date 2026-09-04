@@ -198,6 +198,8 @@ export default function GiftCardsScreen({ navigation }) {
 
       <ScrollView
         style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
@@ -432,7 +434,8 @@ const createStyles = (colors) =>
     },
     headerTitle: { fontSize: 18, fontWeight: '600', color: colors.text },
     placeholder: { width: 40 },
-    scrollView: { flex: 1, paddingHorizontal: 16 },
+    scrollView: { flex: 1 },
+    scrollContent: { paddingHorizontal: 16, paddingBottom: 60, flexGrow: 1 },
     balanceCard: {
       backgroundColor: colors.surface,
       borderRadius: 14,

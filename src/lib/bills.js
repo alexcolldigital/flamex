@@ -5,7 +5,6 @@ export const BILL_ICON_MAP = {
   data: { icon: 'wifi-outline', color: '#3b82f6', label: 'Data' },
   electricity: { icon: 'flash-outline', color: '#f59e0b', label: 'Electricity' },
   cable: { icon: 'tv-outline', color: '#8b5cf6', label: 'Cable TV' },
-  betting: { icon: 'football-outline', color: '#ef4444', label: 'Betting' },
   giftcard: { icon: 'gift-outline', color: '#ec4899', label: 'Gift Card' }
 };
 
@@ -41,14 +40,6 @@ export const BILL_CATEGORIES = [
     icon: 'tv-outline',
     color: '#8b5cf6',
     route: 'Cable'
-  },
-  {
-    id: 'betting',
-    name: 'Betting',
-    description: 'Fund betting accounts',
-    icon: 'football-outline',
-    color: '#ef4444',
-    route: 'Betting'
   },
   {
     id: 'giftcard',

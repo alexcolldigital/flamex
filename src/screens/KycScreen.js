@@ -70,7 +70,7 @@ export default function KycScreen({ navigation }) {
         <View style={styles.placeholder} />
       </LinearGradient>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.iconSection}>
           <View style={styles.iconWrapper}>
             <Icon name="shield-check" size={48} color="#FFB800" />
@@ -146,6 +146,9 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20
+  },
+  contentContainer: {
+    paddingBottom: 120
   },
   iconSection: {
     marginBottom: 24

@@ -122,7 +122,7 @@ export default function BillsScreen({ navigation }) {
           <Ionicons name="information-circle" size={24} color={colors.primary} />
           <Text style={styles.infoTitle}>Real Payment Flows</Text>
           <Text style={styles.infoText}>
-            Airtime, data, electricity, cable, and betting submit through the backend API with PIN confirmation. Gift cards are now submitted for manual admin review before wallet credit.
+            Airtime, data, electricity, and cable submit through the backend API with PIN confirmation. Gift cards are submitted for manual admin review before wallet credit.
           </Text>
         </View>
       </ScrollView>

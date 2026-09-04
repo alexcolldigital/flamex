@@ -8,11 +8,14 @@ import {
   View
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../../store/authStore';
-import { ThemeProvider, useAppTheme } from '../../theme/ThemeProvider';
+import { useAppTheme } from '../../theme/ThemeProvider';
 
-const THEME_OPTIONS = ['system', 'light', 'dark'];
+const THEME_OPTIONS = [
+  { value: 'light',  label: 'Light',  icon: 'sunny' },
+  { value: 'dark',   label: 'Dark',   icon: 'moon' },
+  { value: 'system', label: 'System', icon: 'phone-portrait' },
+];
 const CURRENCY_OPTIONS = ['NGN', 'USD'];
 const LANGUAGE_OPTIONS = ['en'];
 
@@ -48,31 +51,42 @@ export default function PreferencesScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={colors.headerGradient} style={styles.header}>
+      <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Preferences</Text>
         <View style={styles.placeholder} />
-      </LinearGradient>
+      </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Appearance</Text>
-          {THEME_OPTIONS.map((option) => (
-            <TouchableOpacity
-              key={option}
-              style={[styles.option, themeMode === option && styles.optionActive]}
-              onPress={() => handleThemeChange(option)}
-            >
-              <Text style={[styles.optionText, themeMode === option && styles.optionTextActive]}>
-                {option.charAt(0).toUpperCase() + option.slice(1)}
-              </Text>
-              {themeMode === option ? (
-                <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-              ) : null}
-            </TouchableOpacity>
-          ))}
+          <View style={styles.themeRow}>
+            {THEME_OPTIONS.map((opt) => {
+              const active = themeMode === opt.value;
+              return (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[styles.themeBtn, active && styles.themeBtnActive]}
+                  onPress={() => handleThemeChange(opt.value)}
+                  activeOpacity={0.75}
+                >
+                  <Ionicons
+                    name={opt.icon}
+                    size={22}
+                    color={active ? colors.primary : colors.textMuted}
+                  />
+                  <Text style={[styles.themeBtnLabel, active && styles.themeBtnLabelActive]}>
+                    {opt.label}
+                  </Text>
+                  {active && (
+                    <View style={styles.themeActiveDot} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
 
         <View style={styles.card}>
@@ -117,76 +131,62 @@ export default function PreferencesScreen({ navigation }) {
 
 const createStyles = (colors) =>
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background
-    },
+    container: { flex: 1, backgroundColor: colors.background },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingTop: 60,
       paddingHorizontal: 16,
-      paddingBottom: 16
+      paddingBottom: 16,
+      backgroundColor: colors.background,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
     },
     backButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: colors.surface,
-      justifyContent: 'center',
-      alignItems: 'center'
+      width: 40, height: 40, borderRadius: 12,
+      backgroundColor: colors.card,
+      borderWidth: 1, borderColor: colors.border,
+      justifyContent: 'center', alignItems: 'center',
     },
-    headerTitle: {
-      fontSize: 18,
-      fontWeight: '600',
-      color: colors.text
-    },
-    placeholder: {
-      width: 40
-    },
-    scrollView: {
-      flex: 1
-    },
-    content: {
-      flexGrow: 1,
-      padding: 16,
-      gap: 16,
-      paddingBottom: 120
-    },
+    headerTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
+    placeholder: { width: 40 },
+    scrollView: { flex: 1 },
+    content: { flexGrow: 1, padding: 16, gap: 16, paddingBottom: 120 },
     card: {
-      backgroundColor: colors.surface,
-      borderRadius: 16,
-      padding: 16,
-      borderWidth: 1,
-      borderColor: colors.border
+      backgroundColor: colors.card,
+      borderRadius: 16, padding: 16,
+      borderWidth: 1, borderColor: colors.border,
     },
     sectionTitle: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: colors.text,
-      marginBottom: 12
+      fontSize: 14, fontWeight: '700', color: colors.textMuted,
+      textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 14,
     },
+    // Theme toggle
+    themeRow: { flexDirection: 'row', gap: 10 },
+    themeBtn: {
+      flex: 1, alignItems: 'center', paddingVertical: 16,
+      borderRadius: 14, borderWidth: 1.5, borderColor: colors.border,
+      backgroundColor: colors.cardAlt, gap: 6,
+    },
+    themeBtnActive: {
+      borderColor: colors.primary,
+      backgroundColor: colors.primarySoft,
+    },
+    themeBtnLabel: { fontSize: 12, fontWeight: '500', color: colors.textMuted },
+    themeBtnLabelActive: { color: colors.primary, fontWeight: '700' },
+    themeActiveDot: {
+      width: 6, height: 6, borderRadius: 3,
+      backgroundColor: colors.primary,
+    },
+    // List options (currency / language)
     option: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      backgroundColor: colors.cardAlt,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: colors.border,
-      paddingHorizontal: 14,
-      paddingVertical: 14,
-      marginBottom: 10
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+      backgroundColor: colors.cardAlt, borderRadius: 12,
+      borderWidth: 1.5, borderColor: colors.border,
+      paddingHorizontal: 14, paddingVertical: 14, marginBottom: 10,
     },
-    optionActive: {
-      borderColor: colors.primary
-    },
-    optionText: {
-      color: colors.text,
-      fontSize: 15
-    },
-    optionTextActive: {
-      fontWeight: '700'
-    }
+    optionActive: { borderColor: colors.primary },
+    optionText: { color: colors.text, fontSize: 15 },
+    optionTextActive: { fontWeight: '700' },
   });

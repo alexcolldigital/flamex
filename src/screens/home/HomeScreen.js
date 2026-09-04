@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { priceAPI, stakingAPI, walletAPI } from '../../api/client';
 import {
   buildPriceRows,
@@ -16,10 +17,12 @@ import {
   tokenFormatter
 } from '../../lib/finance';
 import { useAuthStore } from '../../store/authStore';
+import { useNotificationStore } from '../../store/notificationStore';
 import { useAppTheme } from '../../theme/ThemeProvider';
 
 export default function HomeScreen({ navigation }) {
   const { user, logout, fetchUserProfile } = useAuthStore();
+  const { unreadCount, initializeNotifications } = useNotificationStore();
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -52,6 +55,7 @@ export default function HomeScreen({ navigation }) {
 
   useEffect(() => {
     loadData();
+    initializeNotifications();
   }, []);
 
   const onRefresh = async () => {
@@ -80,7 +84,6 @@ export default function HomeScreen({ navigation }) {
     { icon: 'bank-transfer-out', label: 'Withdraw', screen: 'Withdraw', color: colors.danger },
     { icon: 'send-outline', label: 'Send', screen: 'Transfer', color: colors.primary },
     { icon: 'swap-horizontal', label: 'Swap', screen: 'Swap', color: colors.accent },
-    { icon: 'credit-card-outline', label: 'Card', screen: 'Card', color: colors.accent },
     { icon: 'receipt-text-outline', label: 'Bills', screen: 'Bills', color: colors.primary },
     { icon: 'handshake-outline', label: 'P2P', screen: 'P2P', color: colors.success }
   ];
@@ -106,9 +109,19 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.greeting}>Welcome back</Text>
             <Text style={styles.userName}>{user?.firstName || 'FlameX user'}</Text>
           </View>
-          <TouchableOpacity style={styles.logoutButton} onPress={logout}>
-            <Icon name="logout" size={22} color={colors.textMuted} />
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.headerIconButton} onPress={() => navigation.navigate('Notifications')}>
+              <Ionicons name="notifications-outline" size={22} color={colors.text} />
+              {unreadCount > 0 && (
+                <View style={styles.notifBadge}>
+                  <Text style={styles.notifBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.headerIconButton} onPress={logout}>
+              <Icon name="logout" size={22} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.balanceCard}>
@@ -264,7 +277,11 @@ const createStyles = (colors) =>
       color: colors.text,
       marginTop: 2
     },
-    logoutButton: {
+    headerActions: {
+      flexDirection: 'row',
+      gap: 8
+    },
+    headerIconButton: {
       width: 40,
       height: 40,
       borderRadius: 20,
@@ -274,23 +291,42 @@ const createStyles = (colors) =>
       borderWidth: 1,
       borderColor: colors.border
     },
+    notifBadge: {
+      position: 'absolute',
+      top: -2,
+      right: -2,
+      backgroundColor: '#ef4444',
+      borderRadius: 8,
+      minWidth: 16,
+      height: 16,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 3
+    },
+    notifBadgeText: {
+      color: '#fff',
+      fontSize: 9,
+      fontWeight: 'bold'
+    },
     balanceCard: {
-      backgroundColor: colors.surface,
+      backgroundColor: colors.card,
       borderRadius: 20,
       marginHorizontal: 20,
-      padding: 22,
+      padding: 24,
       borderWidth: 1,
       borderColor: colors.border
     },
     balanceLabel: {
-      fontSize: 14,
-      color: colors.textMuted
+      fontSize: 13,
+      color: colors.textMuted,
+      fontWeight: '500'
     },
     balanceValue: {
-      fontSize: 34,
-      fontWeight: '700',
+      fontSize: 38,
+      fontWeight: '800',
       color: colors.text,
-      marginTop: 8
+      marginTop: 8,
+      letterSpacing: -0.5
     },
     balanceStats: {
       flexDirection: 'row',
@@ -317,28 +353,29 @@ const createStyles = (colors) =>
       flexDirection: 'row',
       flexWrap: 'wrap',
       justifyContent: 'space-between',
-      padding: 20,
-      gap: 12
+      paddingHorizontal: 20,
+      paddingBottom: 20,
+      gap: 10
     },
     actionButton: {
       width: '47%',
-      backgroundColor: colors.surface,
-      borderRadius: 18,
-      padding: 16,
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      padding: 14,
       alignItems: 'center',
       borderWidth: 1,
       borderColor: colors.border
     },
     actionIcon: {
-      width: 54,
-      height: 54,
-      borderRadius: 16,
+      width: 50,
+      height: 50,
+      borderRadius: 14,
       justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: 10
+      marginBottom: 8
     },
     actionLabel: {
-      fontSize: 14,
+      fontSize: 13,
       fontWeight: '600',
       color: colors.text
     },

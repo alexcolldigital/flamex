@@ -108,7 +108,7 @@ export default function ElectricityScreen({ navigation }) {
         <View style={styles.placeholder} />
       </LinearGradient>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={styles.balanceCard}>
           <Text style={styles.balanceLabel}>Available balance</Text>
           <Text style={styles.balanceValue}>N{Number(user?.balances?.NGN || 0).toLocaleString()}</Text>
@@ -250,7 +250,8 @@ const createStyles = (colors) =>
     backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center' },
     headerTitle: { fontSize: 18, fontWeight: '600', color: colors.text },
     placeholder: { width: 40 },
-    scrollView: { flex: 1, padding: 16 },
+    scrollView: { flex: 1 },
+    scrollContent: { padding: 16, paddingBottom: 60, flexGrow: 1 },
     balanceCard: { backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: colors.border },
     balanceLabel: { color: colors.textMuted },
     balanceValue: { color: colors.success, fontSize: 24, fontWeight: '700', marginTop: 6 },

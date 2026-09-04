@@ -14,9 +14,11 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
+import { useAppTheme } from '../../theme/ThemeProvider';
 
 export default function UsernameSettingsScreen({ navigation }) {
   const { user, setUsername, checkUsernameAvailability } = useAuthStore();
+  const { colors } = useAppTheme();
   
   const [username, setUsernameInput] = useState('');
   const [isChecking, setIsChecking] = useState(false);
@@ -147,68 +149,56 @@ export default function UsernameSettingsScreen({ navigation }) {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
     >
-      {/* Header */}
-      <LinearGradient colors={['#0a0a0f', '#1a1a2e']} style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+      <LinearGradient colors={colors.headerGradient} style={styles.header}>
+        <TouchableOpacity style={[styles.backButton, { backgroundColor: colors.surface }]} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
           {hasExistingUsername ? 'Change Username' : 'Set Username'}
         </Text>
         <View style={styles.placeholder} />
       </LinearGradient>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {/* Info Card */}
-        <View style={styles.infoCard}>
-          <Ionicons name="at" size={32} color="#f59e0b" />
-          <Text style={styles.infoTitle}>Choose Your Username</Text>
-          <Text style={styles.infoText}>
+        <View style={[styles.infoCard, { backgroundColor: colors.surface }]}>
+          <Ionicons name="at" size={32} color={colors.primary} />
+          <Text style={[styles.infoTitle, { color: colors.text }]}>Choose Your Username</Text>
+          <Text style={[styles.infoText, { color: colors.textMuted }]}>
             Your username is your unique identifier on FlameX. Others can use it to send you crypto without needing your wallet address.
           </Text>
         </View>
 
-        {/* Current Username */}
         {hasExistingUsername && (
-          <View style={styles.currentUsernameCard}>
-            <Text style={styles.currentLabel}>Current Username</Text>
-            <Text style={styles.currentValue}>@{user.username}</Text>
+          <View style={[styles.currentUsernameCard, { backgroundColor: colors.primarySoft }]}>
+            <Text style={[styles.currentLabel, { color: colors.textMuted }]}>Current Username</Text>
+            <Text style={[styles.currentValue, { color: colors.primary }]}>@{user.username}</Text>
           </View>
         )}
 
-        {/* Input Section */}
         <View style={styles.inputSection}>
-          <Text style={styles.inputLabel}>New Username</Text>
-          <View style={styles.inputContainer}>
-            <Text style={styles.atSymbol}>@</Text>
+          <Text style={[styles.inputLabel, { color: colors.text }]}>New Username</Text>
+          <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}>
+            <Text style={[styles.atSymbol, { color: colors.textMuted }]}>@</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { color: colors.text }]}
               value={username}
               onChangeText={handleUsernameChange}
               placeholder="username"
-              placeholderTextColor="#444"
+              placeholderTextColor={colors.textMuted}
               autoCapitalize="none"
               autoCorrect={false}
               maxLength={20}
               editable={!isSubmitting}
             />
-            <View style={styles.statusIcon}>
-              {getStatusIcon()}
-            </View>
+            <View style={styles.statusIcon}>{getStatusIcon()}</View>
           </View>
-          <Text style={[styles.statusText, { color: getStatusColor() }]}>
-            {getStatusText()}
-          </Text>
+          <Text style={[styles.statusText, { color: getStatusColor() }]}>{getStatusText()}</Text>
         </View>
 
-        {/* Requirements */}
-        <View style={styles.requirementsCard}>
-          <Text style={styles.requirementsTitle}>Requirements</Text>
+        <View style={[styles.requirementsCard, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.requirementsTitle, { color: colors.text }]}>Requirements</Text>
           {[
             '3-20 characters long',
             'Letters, numbers, and underscores only',
@@ -216,25 +206,21 @@ export default function UsernameSettingsScreen({ navigation }) {
             'Must be unique',
           ].map((req, index) => (
             <View key={index} style={styles.requirementRow}>
-              <Ionicons name="checkmark" size={14} color="#22c55e" />
-              <Text style={styles.requirementText}>{req}</Text>
+              <Ionicons name="checkmark" size={14} color={colors.success} />
+              <Text style={[styles.requirementText, { color: colors.textMuted }]}>{req}</Text>
             </View>
           ))}
         </View>
 
-        {/* Submit Button */}
         <TouchableOpacity
-          style={[
-            styles.submitButton,
-            (!isAvailable || isSubmitting) && styles.submitButtonDisabled,
-          ]}
+          style={[styles.submitButton, { backgroundColor: colors.primary }, (!isAvailable || isSubmitting) && { backgroundColor: colors.border }]}
           onPress={handleSubmit}
           disabled={!isAvailable || isSubmitting}
         >
           {isSubmitting ? (
-            <ActivityIndicator size="small" color="#0a0a0f" />
+            <ActivityIndicator size="small" color={colors.black} />
           ) : (
-            <Text style={styles.submitButtonText}>
+            <Text style={[styles.submitButtonText, { color: colors.black }]}>
               {hasExistingUsername ? 'Update Username' : 'Set Username'}
             </Text>
           )}
@@ -245,150 +231,30 @@ export default function UsernameSettingsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0a0a0f',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 60,
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#222',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  placeholder: {
-    width: 40,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-  },
-  infoCard: {
-    backgroundColor: '#1a1a2e',
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  infoTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
-    marginTop: 12,
-  },
-  infoText: {
-    fontSize: 13,
-    color: '#888',
-    textAlign: 'center',
-    marginTop: 8,
-    lineHeight: 20,
-  },
-  currentUsernameCard: {
-    backgroundColor: '#f59e0b20',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-    alignItems: 'center',
-  },
-  currentLabel: {
-    fontSize: 12,
-    color: '#888',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  currentValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#f59e0b',
-    marginTop: 4,
-  },
-  inputSection: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#fff',
-    marginBottom: 8,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1a1a2e',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    height: 56,
-  },
-  atSymbol: {
-    fontSize: 18,
-    color: '#666',
-    marginRight: 8,
-  },
-  input: {
-    flex: 1,
-    fontSize: 18,
-    color: '#fff',
-  },
-  statusIcon: {
-    width: 24,
-    height: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  statusText: {
-    fontSize: 12,
-    marginTop: 8,
-  },
-  requirementsCard: {
-    backgroundColor: '#1a1a2e',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-  },
-  requirementsTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
-    marginBottom: 12,
-  },
-  requirementRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  requirementText: {
-    fontSize: 13,
-    color: '#888',
-  },
-  submitButton: {
-    backgroundColor: '#f59e0b',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  submitButtonDisabled: {
-    backgroundColor: '#333',
-  },
-  submitButtonText: {
-    color: '#0a0a0f',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  container: { flex: 1 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 60, paddingHorizontal: 16, paddingBottom: 16 },
+  backButton: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: '600' },
+  placeholder: { width: 40 },
+  scrollView: { flex: 1 },
+  content: { padding: 16, paddingBottom: 120 },
+  infoCard: { borderRadius: 16, padding: 24, alignItems: 'center', marginBottom: 20 },
+  infoTitle: { fontSize: 18, fontWeight: '600', marginTop: 12 },
+  infoText: { fontSize: 13, textAlign: 'center', marginTop: 8, lineHeight: 20 },
+  currentUsernameCard: { borderRadius: 12, padding: 16, marginBottom: 20, alignItems: 'center' },
+  currentLabel: { fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 },
+  currentValue: { fontSize: 20, fontWeight: 'bold', marginTop: 4 },
+  inputSection: { marginBottom: 20 },
+  inputLabel: { fontSize: 14, fontWeight: '500', marginBottom: 8 },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, paddingHorizontal: 16, height: 56 },
+  atSymbol: { fontSize: 18, marginRight: 8 },
+  input: { flex: 1, fontSize: 18 },
+  statusIcon: { width: 24, height: 24, justifyContent: 'center', alignItems: 'center' },
+  statusText: { fontSize: 12, marginTop: 8 },
+  requirementsCard: { borderRadius: 12, padding: 16, marginBottom: 20 },
+  requirementsTitle: { fontSize: 14, fontWeight: '600', marginBottom: 12 },
+  requirementRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  requirementText: { fontSize: 13 },
+  submitButton: { paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
+  submitButtonText: { fontSize: 16, fontWeight: '600' },
 });

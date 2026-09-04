@@ -21,7 +21,6 @@ import SettingsScreen from '../screens/settings/SettingsScreen';
 import DepositScreen from '../screens/fiat/DepositScreen';
 import WithdrawScreen from '../screens/fiat/WithdrawScreen';
 import TransferScreen from '../screens/transfer/TransferScreen';
-import CardScreen from '../screens/CardScreen';
 
 // Settings Screens
 import KeyManagementScreen from '../screens/settings/KeyManagementScreen';
@@ -43,7 +42,6 @@ import AirtimeScreen from '../screens/bills/AirtimeScreen';
 import DataScreen from '../screens/bills/DataScreen';
 import ElectricityScreen from '../screens/bills/ElectricityScreen';
 import CableScreen from '../screens/bills/CableScreen';
-import BettingScreen from '../screens/bills/BettingScreen';
 import GiftCardsScreen from '../screens/bills/GiftCardsScreen';
 import P2PScreen from '../screens/p2p/P2PScreen';
 import P2PCreateOfferScreen from '../screens/p2p/P2PCreateOfferScreen';
@@ -134,7 +132,6 @@ const MainStackNavigator = () => {
       <Stack.Screen name="Deposit" component={DepositScreen} />
       <Stack.Screen name="Withdraw" component={WithdrawScreen} />
       <Stack.Screen name="Transfer" component={TransferScreen} />
-      <Stack.Screen name="Card" component={CardScreen} />
       <Stack.Screen name="ProfileDetails" component={ProfileDetailsScreen} />
       <Stack.Screen name="Kyc" component={KycScreen} />
       <Stack.Screen name="Preferences" component={PreferencesScreen} />
@@ -150,7 +147,6 @@ const MainStackNavigator = () => {
       <Stack.Screen name="Data" component={DataScreen} />
       <Stack.Screen name="Electricity" component={ElectricityScreen} />
       <Stack.Screen name="Cable" component={CableScreen} />
-      <Stack.Screen name="Betting" component={BettingScreen} />
       <Stack.Screen name="GiftCards" component={GiftCardsScreen} />
       <Stack.Screen name="P2P" component={P2PScreen} />
       <Stack.Screen name="P2PCreateOffer" component={P2PCreateOfferScreen} />

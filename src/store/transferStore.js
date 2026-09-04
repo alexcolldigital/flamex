@@ -17,7 +17,7 @@ export const useTransferStore = create((set, get) => ({
     }
   },
 
-  executeTransfer: async ({ recipient, recipientType, chain, currency, amount, note, pin }) => {
+  executeTransfer: async ({ recipient, recipientType, chain, currency, amount, note, pin, otp }) => {
     set({ isLoading: true, error: null });
     try {
       let response;
@@ -30,8 +30,18 @@ export const useTransferStore = create((set, get) => ({
           currency: transferCurrency,
           ...(chain ? { chainId: chain } : {}),
           description: note,
-          pin
+          pin,
+          ...(otp ? { otp } : {})
         });
+
+        if (response.status === 202 || response.data?.requiresOTP) {
+          set({ isLoading: false });
+          return {
+            success: false,
+            requiresOTP: true,
+            message: response.data?.message || '2FA verification required'
+          };
+        }
 
         get().addRecentRecipient({
           username: recipient,

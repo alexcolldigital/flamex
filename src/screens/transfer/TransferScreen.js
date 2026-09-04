@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
 import { useTransferStore } from '../../store/transferStore';
 import { useWalletStore } from '../../store/walletStore';
+import { useAppTheme } from '../../theme/ThemeProvider';
 
 const TRANSFER_ASSETS = [
   { id: 'ngn', name: 'Nigerian Naira', symbol: 'NGN', color: '#16a34a', chainId: null, usernameOnly: true },
@@ -32,6 +33,7 @@ export default function TransferScreen({ navigation }) {
   const { user, verifyPin, fetchUserProfile } = useAuthStore();
   const { validateUsername, executeTransfer } = useTransferStore();
   const { fetchBalance } = useWalletStore();
+  const { colors } = useAppTheme();
   
   const [recipient, setRecipient] = useState('');
   const [recipientType, setRecipientType] = useState('username'); // 'username' or 'address'
@@ -469,18 +471,18 @@ export default function TransferScreen({ navigation }) {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <LinearGradient colors={['#0a0a0f', '#1a1a2e']} style={styles.header}>
+      <LinearGradient colors={colors.headerGradient} style={styles.header}>
         <TouchableOpacity
-          style={styles.backButton}
+          style={[styles.backButton, { backgroundColor: colors.surface }]}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Send</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Send</Text>
         <View style={styles.placeholder} />
       </LinearGradient>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView style={[styles.scrollView, { backgroundColor: colors.background }]} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         {/* Step Indicator */}
         <View style={styles.stepIndicator}>
           {[1, 2, 3].map((s) => (
@@ -615,7 +617,6 @@ export default function TransferScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0a0f',
   },
   header: {
     flexDirection: 'row',
@@ -643,6 +644,10 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 60,
+    flexGrow: 1
   },
   stepIndicator: {
     flexDirection: 'row',

@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -29,7 +30,7 @@ export default function WithdrawScreen({ navigation }) {
   const { colors } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const [mode, setMode] = useState('fiat');
+  const [mode, setMode] = useState('ngn');
   const [banks, setBanks] = useState([]);
   const [selectedBank, setSelectedBank] = useState(null);
   const [wallet, setWallet] = useState(null);
@@ -37,10 +38,13 @@ export default function WithdrawScreen({ navigation }) {
   const [accountNumber, setAccountNumber] = useState('');
   const [accountName, setAccountName] = useState('');
   const [pin, setPin] = useState('');
+  const [otp, setOtp] = useState('');
+  const [otpRequired, setOtpRequired] = useState(false);
   const [loading, setLoading] = useState(false);
   const [verifyingAccount, setVerifyingAccount] = useState(false);
   const [selectedCrypto, setSelectedCrypto] = useState(CRYPTO_OPTIONS[0]);
   const [destinationAddress, setDestinationAddress] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     withdrawalAPI
@@ -74,19 +78,31 @@ export default function WithdrawScreen({ navigation }) {
     }
 
     setLoading(true);
+    setErrorMessage('');
     try {
-      await withdrawalAPI.withdrawNgn({
+      const withdraw = mode === 'usd' ? withdrawalAPI.withdrawUsd : withdrawalAPI.withdrawNgn;
+      const response = await withdraw({
         amount: numericAmount,
         bankCode: selectedBank.code,
         accountNumber,
         accountName,
-        pin
+        pin,
+        ...(otp ? { otp } : {})
       });
+      if (response.status === 202 || response.data?.requiresOTP) {
+        setOtpRequired(true);
+        const requestOtp = mode === 'usd' ? withdrawalAPI.requestUsdOtp : withdrawalAPI.requestNgnOtp;
+        await requestOtp(numericAmount);
+        return;
+      }
 
       await fetchUserProfile();
       navigation.goBack();
     } catch (error) {
       console.log('NGN withdrawal failed:', error);
+      const message = error.response?.data?.message || 'Unable to withdraw funds.';
+      setErrorMessage(message);
+      Alert.alert('Withdrawal failed', message);
     } finally {
       setLoading(false);
     }
@@ -99,18 +115,49 @@ export default function WithdrawScreen({ navigation }) {
     }
 
     setLoading(true);
+    setErrorMessage('');
     try {
-      await withdrawalAPI.withdrawCrypto({
+      const response = await withdrawalAPI.withdrawCrypto({
         chainId: selectedCrypto.chainId,
         token: selectedCrypto.token,
         amount: numericAmount,
         toAddress: destinationAddress,
-        pin
+        pin,
+        ...(otp ? { otp } : {})
       });
+      if (response.status === 202 || response.data?.requiresOTP) {
+        setOtpRequired(true);
+        await withdrawalAPI.requestCryptoOtp(numericAmount);
+        return;
+      }
       await fetchUserProfile();
       navigation.goBack();
     } catch (error) {
       console.log('Crypto withdrawal failed:', error);
+      const message = error.response?.data?.message || 'Unable to withdraw funds.';
+      setErrorMessage(message);
+      Alert.alert('Withdrawal failed', message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const requestOtp = async () => {
+    const numericAmount = Number(amount);
+    if (!numericAmount) return;
+    setLoading(true);
+    try {
+      const response = mode === 'ngn'
+        ? await withdrawalAPI.requestNgnOtp(numericAmount)
+        : mode === 'usd'
+          ? await withdrawalAPI.requestUsdOtp(numericAmount)
+        : await withdrawalAPI.requestCryptoOtp(numericAmount);
+      setOtpRequired(Boolean(response.data?.requiresOTP));
+    } catch (error) {
+      console.log('Withdrawal OTP request failed:', error);
+      const message = error.response?.data?.message || 'Unable to request a verification code.';
+      setErrorMessage(message);
+      Alert.alert('OTP request failed', message);
     } finally {
       setLoading(false);
     }
@@ -128,26 +175,28 @@ export default function WithdrawScreen({ navigation }) {
         <View style={styles.placeholder} />
       </LinearGradient>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         <View style={styles.segmented}>
-          {['fiat', 'crypto'].map((item) => (
+          {['ngn', 'usd', 'crypto'].map((item) => (
             <TouchableOpacity
               key={item}
               style={[styles.segment, mode === item && styles.segmentActive]}
               onPress={() => setMode(item)}
             >
               <Text style={[styles.segmentText, mode === item && styles.segmentTextActive]}>
-                {item === 'fiat' ? 'NGN' : 'Crypto'}
+                {item === 'ngn' ? 'NGN' : item === 'usd' ? 'USD' : 'Crypto'}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {mode === 'fiat' ? (
+        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+
+        {mode === 'ngn' || mode === 'usd' ? (
           <>
             <View style={styles.card}>
-              <Text style={styles.balanceLabel}>Available NGN balance</Text>
-              <Text style={styles.balanceValue}>{currencyFormatter(user?.balances?.NGN || 0)}</Text>
+              <Text style={styles.balanceLabel}>Available {mode.toUpperCase()} balance</Text>
+              <Text style={styles.balanceValue}>{currencyFormatter(user?.balances?.[mode.toUpperCase()] || 0, mode === 'usd' ? 'USD' : 'NGN')}</Text>
             </View>
 
             <View style={styles.card}>
@@ -159,7 +208,7 @@ export default function WithdrawScreen({ navigation }) {
                 value={amount}
                 onChangeText={setAmount}
                 keyboardType="number-pad"
-                placeholder="Enter amount"
+                placeholder={mode === 'usd' ? 'Enter USD amount' : 'Enter NGN amount'}
                 placeholderTextColor={colors.textMuted}
               />
 
@@ -215,6 +264,24 @@ export default function WithdrawScreen({ navigation }) {
                 secureTextEntry
                 maxLength={6}
               />
+
+              {otpRequired && (
+                <>
+                  <Text style={styles.label}>Email verification code</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={otp}
+                    onChangeText={setOtp}
+                    keyboardType="number-pad"
+                    placeholder="Enter the code sent to your email"
+                    placeholderTextColor={colors.textMuted}
+                    maxLength={6}
+                  />
+                  <TouchableOpacity style={styles.secondaryButton} onPress={requestOtp} disabled={loading}>
+                    <Text style={styles.secondaryButtonText}>Resend code</Text>
+                  </TouchableOpacity>
+                </>
+              )}
 
               <TouchableOpacity style={styles.primaryButton} onPress={handleFiatWithdraw} disabled={loading}>
                 {loading ? (
@@ -288,6 +355,24 @@ export default function WithdrawScreen({ navigation }) {
                 maxLength={6}
               />
 
+              {otpRequired && (
+                <>
+                  <Text style={styles.label}>Email verification code</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={otp}
+                    onChangeText={setOtp}
+                    keyboardType="number-pad"
+                    placeholder="Enter the code sent to your email"
+                    placeholderTextColor={colors.textMuted}
+                    maxLength={6}
+                  />
+                  <TouchableOpacity style={styles.secondaryButton} onPress={requestOtp} disabled={loading}>
+                    <Text style={styles.secondaryButtonText}>Resend code</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+
               <TouchableOpacity style={styles.primaryButton} onPress={handleCryptoWithdraw} disabled={loading}>
                 {loading ? (
                   <ActivityIndicator size="small" color={colors.black} />
@@ -349,6 +434,10 @@ const createStyles = (colors) =>
       borderWidth: 1,
       borderColor: colors.border,
       padding: 4
+    },
+    errorText: {
+      color: colors.danger || '#ef4444',
+      fontWeight: '600'
     },
     segment: {
       flex: 1,
@@ -440,6 +529,15 @@ const createStyles = (colors) =>
     primaryButtonText: {
       color: colors.black,
       fontWeight: '700'
+    },
+    secondaryButton: {
+      alignItems: 'center',
+      paddingVertical: 10,
+      marginTop: 4
+    },
+    secondaryButtonText: {
+      color: colors.primary,
+      fontWeight: '600'
     },
     cryptoRow: {
       flexDirection: 'row',

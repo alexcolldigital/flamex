@@ -14,9 +14,16 @@ export const useReferralStore = create((set, get) => ({
       set({ referralData: response.data, isLoading: false });
       return response.data;
     } catch (error) {
-      const message = error.response?.data?.message || 'Failed to fetch referral data';
-      set({ error: message, isLoading: false });
-      throw error;
+      // If no record yet, generate one then retry
+      if (error.response?.status === 404) {
+        try {
+          await referralAPI.generateLink();
+          const retry = await referralAPI.getData();
+          set({ referralData: retry.data, isLoading: false });
+          return retry.data;
+        } catch {}
+      }
+      set({ error: error.response?.data?.message || 'Failed to fetch referral data', isLoading: false });
     }
   },
 

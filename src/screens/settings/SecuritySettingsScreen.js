@@ -14,9 +14,11 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
+import { useAppTheme } from '../../theme/ThemeProvider';
 
 export default function SecuritySettingsScreen({ navigation }) {
   const { user, changePin, verifyPin } = useAuthStore();
+  const { colors } = useAppTheme();
   
   const [showChangePinModal, setShowChangePinModal] = useState(false);
   const [currentPin, setCurrentPin] = useState('');
@@ -171,72 +173,67 @@ export default function SecuritySettingsScreen({ navigation }) {
   ];
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <LinearGradient colors={['#0a0a0f', '#1a1a2e']} style={styles.header}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <LinearGradient colors={colors.headerGradient} style={styles.header}>
         <TouchableOpacity
-          style={styles.backButton}
+          style={[styles.backButton, { backgroundColor: colors.surface }]}
           onPress={() => navigation.goBack()}
         >
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Security</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Security</Text>
         <View style={styles.placeholder} />
       </LinearGradient>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
-        {/* Security Status */}
-        <View style={styles.statusCard}>
-          <View style={styles.statusIcon}>
-            <Ionicons name="shield-checkmark" size={32} color="#22c55e" />
+        <View style={[styles.statusCard, { backgroundColor: colors.successSoft }]}>
+          <View style={[styles.statusIcon, { backgroundColor: `${colors.success}30` }]}>
+            <Ionicons name="shield-checkmark" size={32} color={colors.success} />
           </View>
           <View style={styles.statusText}>
-            <Text style={styles.statusTitle}>Your account is secure</Text>
-            <Text style={styles.statusSubtitle}>
+            <Text style={[styles.statusTitle, { color: colors.success }]}>Your account is secure</Text>
+            <Text style={[styles.statusSubtitle, { color: colors.textMuted }]}>
               PIN enabled • Last changed 30 days ago
             </Text>
           </View>
         </View>
 
-        {/* Security Options */}
-        <Text style={styles.sectionTitle}>Security Settings</Text>
-        <View style={styles.optionsContainer}>
+        <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>Security Settings</Text>
+        <View style={[styles.optionsContainer, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}>
           {SECURITY_OPTIONS.map((option) => (
             option.toggle ? (
-              <View key={option.id} style={styles.optionRow}>
+              <View key={option.id} style={[styles.optionRow, { borderBottomColor: colors.border }]}>
                 <View style={[styles.optionIcon, { backgroundColor: `${option.color}20` }]}>
-
-                    <Ionicons name={option.icon} size={22} color={option.color} />
-                  </View>
-                  <View style={styles.optionText}>
-                    <Text style={styles.optionTitle}>{option.title}</Text>
-                    <Text style={styles.optionSubtitle}>{option.subtitle}</Text>
-                  </View>
-                  <Switch
-                    value={option.value}
-                    onValueChange={option.onToggle}
-                    trackColor={{ false: '#333', true: option.color }}
-                    thumbColor="#fff"
-                  />
+                  <Ionicons name={option.icon} size={22} color={option.color} />
                 </View>
-              ) : (
-                <TouchableOpacity key={option.id} style={styles.optionRow} onPress={option.action}>
-                  <View style={[styles.optionIcon, { backgroundColor: `${option.color}20` }]}> 
-                    <Ionicons name={option.icon} size={22} color={option.color} />
-                  </View>
-                  <View style={styles.optionText}>
-                    <Text style={styles.optionTitle}>{option.title}</Text>
-                    <Text style={styles.optionSubtitle}>{option.subtitle}</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color="#666" />
-                </TouchableOpacity>
-              )
+                <View style={styles.optionText}>
+                  <Text style={[styles.optionTitle, { color: colors.text }]}>{option.title}</Text>
+                  <Text style={[styles.optionSubtitle, { color: colors.textMuted }]}>{option.subtitle}</Text>
+                </View>
+                <Switch
+                  value={option.value}
+                  onValueChange={option.onToggle}
+                  trackColor={{ false: colors.border, true: option.color }}
+                  thumbColor={colors.white}
+                />
+              </View>
+            ) : (
+              <TouchableOpacity key={option.id} style={[styles.optionRow, { borderBottomColor: colors.border }]} onPress={option.action}>
+                <View style={[styles.optionIcon, { backgroundColor: `${option.color}20` }]}>
+                  <Ionicons name={option.icon} size={22} color={option.color} />
+                </View>
+                <View style={styles.optionText}>
+                  <Text style={[styles.optionTitle, { color: colors.text }]}>{option.title}</Text>
+                  <Text style={[styles.optionSubtitle, { color: colors.textMuted }]}>{option.subtitle}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+            )
           ))}
         </View>
 
-        {/* Security Tips */}
-        <View style={styles.tipsCard}>
-          <Text style={styles.tipsTitle}>Security Tips</Text>
+        <View style={[styles.tipsCard, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}>
+          <Text style={[styles.tipsTitle, { color: colors.text }]}>Security Tips</Text>
           {[
             'Never share your PIN with anyone',
             'Use a unique PIN not used elsewhere',
@@ -244,14 +241,13 @@ export default function SecuritySettingsScreen({ navigation }) {
             'Regularly review your transaction history',
           ].map((tip, index) => (
             <View key={index} style={styles.tipRow}>
-              <Ionicons name="checkmark-circle" size={14} color="#22c55e" />
-              <Text style={styles.tipText}>{tip}</Text>
+              <Ionicons name="checkmark-circle" size={14} color={colors.success} />
+              <Text style={[styles.tipText, { color: colors.textMuted }]}>{tip}</Text>
             </View>
           ))}
         </View>
       </ScrollView>
 
-      {/* Change PIN Modal */}
       <Modal
         visible={showChangePinModal}
         transparent
@@ -259,14 +255,14 @@ export default function SecuritySettingsScreen({ navigation }) {
         onRequestClose={closePinModal}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
             <TouchableOpacity style={styles.modalClose} onPress={closePinModal}>
-              <Ionicons name="close" size={24} color="#666" />
+              <Ionicons name="close" size={24} color={colors.textMuted} />
             </TouchableOpacity>
 
-            <Ionicons name="lock-closed" size={48} color="#f59e0b" />
-            <Text style={styles.modalTitle}>{getPinStepTitle()}</Text>
-            <Text style={styles.modalSubtitle}>{getPinStepSubtitle()}</Text>
+            <Ionicons name="lock-closed" size={48} color={colors.primary} />
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{getPinStepTitle()}</Text>
+            <Text style={[styles.modalSubtitle, { color: colors.textMuted }]}>{getPinStepSubtitle()}</Text>
 
             <TextInput
               style={styles.pinInput}
@@ -276,33 +272,33 @@ export default function SecuritySettingsScreen({ navigation }) {
               maxLength={6}
               secureTextEntry
               placeholder="------"
-              placeholderTextColor="#444"
+              placeholderTextColor={colors.textMuted}
               textAlign="center"
               autoFocus
             />
 
-            {/* PIN Dots */}
             <View style={styles.pinDots}>
               {[0, 1, 2, 3, 4, 5].map((i) => (
                 <View
                   key={i}
                   style={[
                     styles.pinDot,
-                    getPinValue().length > i && styles.pinDotFilled,
+                    { borderColor: colors.border },
+                    getPinValue().length > i && { backgroundColor: colors.primary, borderColor: colors.primary },
                   ]}
                 />
               ))}
             </View>
 
             <TouchableOpacity
-              style={styles.modalButton}
+              style={[styles.modalButton, { backgroundColor: colors.primary }, (isProcessing || getPinValue().length !== 6) && { opacity: 0.5 }]}
               onPress={handleChangePin}
               disabled={isProcessing || getPinValue().length !== 6}
             >
               {isProcessing ? (
-                <ActivityIndicator size="small" color="#0a0a0f" />
+                <ActivityIndicator size="small" color={colors.black} />
               ) : (
-                <Text style={styles.modalButtonText}>
+                <Text style={[styles.modalButtonText, { color: colors.black }]}>
                   {pinStep === 3 ? 'Confirm' : 'Continue'}
                 </Text>
               )}
@@ -313,7 +309,7 @@ export default function SecuritySettingsScreen({ navigation }) {
                 style={styles.backStepButton}
                 onPress={() => setPinStep(pinStep - 1)}
               >
-                <Text style={styles.backStepText}>Back</Text>
+                <Text style={[styles.backStepText, { color: colors.textMuted }]}>Back</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -324,10 +320,7 @@ export default function SecuritySettingsScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0a0a0f',
-  },
+  container: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -337,193 +330,54 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#222',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 40, height: 40, borderRadius: 20,
+    justifyContent: 'center', alignItems: 'center',
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  placeholder: {
-    width: 40,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    padding: 16,
-    flexGrow: 1,
-    paddingBottom: 120,
-  },
+  headerTitle: { fontSize: 18, fontWeight: '600' },
+  placeholder: { width: 40 },
+  scrollView: { flex: 1 },
+  content: { padding: 16, flexGrow: 1, paddingBottom: 120 },
   statusCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#22c55e20',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
+    flexDirection: 'row', alignItems: 'center',
+    borderRadius: 12, padding: 16, marginBottom: 20,
   },
   statusIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#22c55e30',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: 48, height: 48, borderRadius: 24,
+    justifyContent: 'center', alignItems: 'center',
   },
-  statusText: {
-    marginLeft: 12,
-  },
-  statusTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#22c55e',
-  },
-  statusSubtitle: {
-    fontSize: 13,
-    color: '#888',
-    marginTop: 2,
-  },
+  statusText: { marginLeft: 12 },
+  statusTitle: { fontSize: 16, fontWeight: '600' },
+  statusSubtitle: { fontSize: 13, marginTop: 2 },
   sectionTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#888',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 12,
+    fontSize: 13, fontWeight: '600',
+    textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12,
   },
-  optionsContainer: {
-    backgroundColor: '#1a1a2e',
-    borderRadius: 12,
-    overflow: 'hidden',
-    marginBottom: 20,
-  },
+  optionsContainer: { borderRadius: 12, overflow: 'hidden', marginBottom: 20 },
   optionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#222',
+    flexDirection: 'row', alignItems: 'center',
+    padding: 14, borderBottomWidth: 1,
   },
-  optionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  optionText: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  optionTitle: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#fff',
-  },
-  optionSubtitle: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
-  },
-  tipsCard: {
-    backgroundColor: '#1a1a2e',
-    borderRadius: 12,
-    padding: 16,
-  },
-  tipsTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
-    marginBottom: 12,
-  },
-  tipRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  tipText: {
-    fontSize: 13,
-    color: '#888',
-  },
+  optionIcon: { width: 40, height: 40, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  optionText: { flex: 1, marginLeft: 12 },
+  optionTitle: { fontSize: 15, fontWeight: '500' },
+  optionSubtitle: { fontSize: 12, marginTop: 2 },
+  tipsCard: { borderRadius: 12, padding: 16 },
+  tipsTitle: { fontSize: 14, fontWeight: '600', marginBottom: 12 },
+  tipRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  tipText: { fontSize: 13 },
   modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center', alignItems: 'center', padding: 20,
   },
-  modalContent: {
-    backgroundColor: '#1a1a2e',
-    borderRadius: 20,
-    padding: 32,
-    width: '100%',
-    alignItems: 'center',
-  },
-  modalClose: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginTop: 16,
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    color: '#888',
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  pinInput: {
-    position: 'absolute',
-    opacity: 0,
-    width: 1,
-    height: 1,
-  },
-  pinDots: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 24,
-  },
-  pinDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 2,
-    borderColor: '#444',
-  },
-  pinDotFilled: {
-    backgroundColor: '#f59e0b',
-    borderColor: '#f59e0b',
-  },
-  modalButton: {
-    width: '100%',
-    backgroundColor: '#f59e0b',
-    paddingVertical: 14,
-    borderRadius: 12,
-    marginTop: 32,
-    alignItems: 'center',
-  },
-  modalButtonText: {
-    color: '#0a0a0f',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  backStepButton: {
-    marginTop: 16,
-    paddingVertical: 8,
-  },
-  backStepText: {
-    color: '#888',
-    fontSize: 14,
-  },
+  modalContent: { borderRadius: 20, padding: 32, width: '100%', alignItems: 'center' },
+  modalClose: { position: 'absolute', top: 16, right: 16 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', marginTop: 16 },
+  modalSubtitle: { fontSize: 14, marginTop: 8, textAlign: 'center' },
+  pinInput: { position: 'absolute', opacity: 0, width: 1, height: 1 },
+  pinDots: { flexDirection: 'row', gap: 12, marginTop: 24 },
+  pinDot: { width: 16, height: 16, borderRadius: 8, borderWidth: 2 },
+  modalButton: { width: '100%', paddingVertical: 14, borderRadius: 12, marginTop: 32, alignItems: 'center' },
+  modalButtonText: { fontSize: 16, fontWeight: '600' },
+  backStepButton: { marginTop: 16, paddingVertical: 8 },
+  backStepText: { fontSize: 14 },
 });

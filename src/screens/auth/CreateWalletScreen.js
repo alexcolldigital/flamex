@@ -42,7 +42,8 @@ export default function CreateWalletScreen({ navigation }) {
     lastName: '',
     email: '',
     phone: '',
-    password: ''
+    password: '',
+    referralCode: ''
   });
 
   useEffect(() => {
@@ -95,7 +96,8 @@ export default function CreateWalletScreen({ navigation }) {
     const result = await register({
       ...userData,
       mnemonic,
-      wallets: generateWallets()
+      wallets: generateWallets(),
+      referralCode: userData.referralCode ? userData.referralCode.trim().toUpperCase() : undefined
     });
     setIsLoading(false);
 
@@ -127,7 +129,7 @@ export default function CreateWalletScreen({ navigation }) {
           ))}
         </View>
 
-        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
           {step === 1 ? (
             <View>
               <Text style={styles.stepTitle}>Your recovery phrase</Text>
@@ -203,7 +205,8 @@ export default function CreateWalletScreen({ navigation }) {
                 ['lastName', 'Last name'],
                 ['email', 'Email'],
                 ['phone', 'Phone'],
-                ['password', 'Password']
+                ['password', 'Password'],
+                ['referralCode', 'Referral code (optional)']
               ].map(([key, label]) => (
                 <TextInput
                   key={key}
@@ -213,7 +216,7 @@ export default function CreateWalletScreen({ navigation }) {
                   placeholder={label}
                   placeholderTextColor={colors.textMuted}
                   keyboardType={key === 'email' ? 'email-address' : key === 'phone' ? 'phone-pad' : 'default'}
-                  autoCapitalize={key === 'email' ? 'none' : 'words'}
+                  autoCapitalize={key === 'referralCode' ? 'characters' : key === 'email' ? 'none' : 'words'}
                   secureTextEntry={key === 'password'}
                 />
               ))}
@@ -278,6 +281,10 @@ const createStyles = (colors) =>
     content: {
       flex: 1,
       padding: 20
+    },
+    contentContainer: {
+      paddingBottom: 40,
+      flexGrow: 1
     },
     stepTitle: {
       fontSize: 28,

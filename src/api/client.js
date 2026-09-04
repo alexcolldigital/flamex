@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import { Platform } from 'react-native';
 import {
   API_BASE_URL,
   CHAIN_TO_CURRENCY,
@@ -16,7 +17,13 @@ const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use(async (config) => {
-  const token = await AsyncStorage.getItem('token');
+  let token = await AsyncStorage.getItem('token');
+
+  if (!token && Platform.OS !== 'web') {
+    const SecureStore = require('expo-secure-store');
+    token = await SecureStore.getItemAsync('authToken');
+  }
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -83,6 +90,7 @@ export const stakingAPI = {
 
 export const transferAPI = {
   validateUsername: (username) => apiClient.get(`/transfer/validate-username/${username}`),
+  requestOtp: (data) => apiClient.post('/transfer/request-otp', data),
   sendByUsername: (data) => apiClient.post('/transfer/username', data),
   getHistory: () => apiClient.get('/transfer/history')
 };
@@ -90,6 +98,7 @@ export const transferAPI = {
 export const depositAPI = {
   getAddress: (chainId) => apiClient.get(`/deposit/address/${chainId}`),
   createNgnDeposit: (amount, method = 'checkout') => apiClient.post('/deposit/ngn', { amount, method }),
+  createFiatDeposit: (amount, currency = 'NGN') => apiClient.post('/deposit/ngn', { amount, currency, method: 'checkout' }),
   verifyNgnDeposit: (reference, transactionId) =>
     apiClient.post('/deposit/verify', { reference, transactionId })
 };
@@ -98,7 +107,11 @@ export const withdrawalAPI = {
   getBanks: () => apiClient.get('/withdrawal/banks'),
   verifyAccount: (bankCode, accountNumber) =>
     apiClient.post('/withdrawal/verify-account', { bankCode, accountNumber }),
+  requestNgnOtp: (amount) => apiClient.post('/withdrawal/ngn/request-otp', { amount }),
+  requestUsdOtp: (amount) => apiClient.post('/withdrawal/usd/request-otp', { amount }),
+  requestCryptoOtp: (amount) => apiClient.post('/withdrawal/crypto/request-otp', { amount }),
   withdrawNgn: (data) => apiClient.post('/withdrawal/ngn', data),
+  withdrawUsd: (data) => apiClient.post('/withdrawal/usd', data),
   withdrawCrypto: (data) => apiClient.post('/withdrawal/crypto', data)
 };
 
@@ -131,7 +144,6 @@ export const billsAPI = {
   buyData: (data) => apiClient.post('/bills/data', data),
   payElectricity: (data) => apiClient.post('/bills/electricity', data),
   payCable: (data) => apiClient.post('/bills/cable', data),
-  payBetting: (data) => apiClient.post('/bills/betting', data),
   submitGiftCardTrade: (data) => apiClient.post('/bills/giftcard-trade', data),
   getHistory: (params = {}) => apiClient.get('/bills/history', { params })
 };

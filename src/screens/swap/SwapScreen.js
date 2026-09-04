@@ -10,20 +10,23 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { priceAPI, swapAPI, walletAPI } from '../../api/client';
 import { currencyFormatter, normalizeTransaction, tokenFormatter } from '../../lib/finance';
+import { useNotificationStore } from '../../store/notificationStore';
 import { useAppTheme } from '../../theme/ThemeProvider';
 
-const CHAIN_OPTIONS = ['solana', 'ethereum'];
+const CHAIN_OPTIONS = ['fiat', 'solana', 'ethereum'];
 
-export default function SwapScreen() {
+export default function SwapScreen({ navigation }) {
   const { colors } = useAppTheme();
+  const { unreadCount, initializeNotifications } = useNotificationStore();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [wallet, setWallet] = useState(null);
   const [prices, setPrices] = useState({});
   const [fromChain, setFromChain] = useState('solana');
   const [toChain, setToChain] = useState('solana');
-  const [tokenOptions, setTokenOptions] = useState({ solana: [], ethereum: [] });
+  const [tokenOptions, setTokenOptions] = useState({ fiat: [{ symbol: 'USD' }, { symbol: 'NGN' }], solana: [], ethereum: [] });
   const [fromToken, setFromToken] = useState('SOL');
   const [toToken, setToToken] = useState('USDT');
   const [amount, setAmount] = useState('');
@@ -31,6 +34,7 @@ export default function SwapScreen() {
   const [history, setHistory] = useState([]);
   const [loadingQuote, setLoadingQuote] = useState(false);
   const [loadingSwap, setLoadingSwap] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const loadData = async () => {
     try {
@@ -45,6 +49,7 @@ export default function SwapScreen() {
       setWallet(walletRes.data);
       setPrices(pricesRes.data);
       setTokenOptions({
+        fiat: [{ symbol: 'USD' }, { symbol: 'NGN' }],
         solana: solanaTokensRes.data.tokens || [],
         ethereum: ethereumTokensRes.data.tokens || []
       });
@@ -56,6 +61,7 @@ export default function SwapScreen() {
 
   useEffect(() => {
     loadData();
+    initializeNotifications();
   }, []);
 
   useEffect(() => {
@@ -78,7 +84,39 @@ export default function SwapScreen() {
     if (!amount || Number(amount) <= 0) return;
 
     setLoadingQuote(true);
+    setErrorMessage('');
     try {
+      const getNgnPrice = (token) => {
+        if (token === 'NGN') return 1;
+        if (token === 'USD') {
+          return Number(prices.USDT?.ngn || 1500) / Number(prices.USDT?.usd || 1);
+        }
+        return Number(prices[token]?.ngn || 0);
+      };
+
+      if (fromChain === 'fiat' || toChain === 'fiat') {
+        const fromNgnPrice = getNgnPrice(fromToken);
+        const toNgnPrice = getNgnPrice(toToken);
+        if (!fromNgnPrice || !toNgnPrice) {
+          throw new Error('FX rate unavailable for this currency pair.');
+        }
+        const rate = fromNgnPrice / toNgnPrice;
+        const grossAmount = Number(amount) * rate;
+        const toAmount = Number((grossAmount * 0.995).toFixed(toToken === 'NGN' ? 2 : 8));
+        setQuote({
+          type: 'ledger-fx',
+          provider: 'FlameX FX',
+          fromToken,
+          toToken,
+          fromAmount: Number(amount),
+          toAmount,
+          minimumReceived: toAmount,
+          priceImpact: '0',
+          exchangeRate: Number(rate.toFixed(8)),
+          fee: Number((grossAmount - toAmount).toFixed(2))
+        });
+        return;
+      }
       const response = await swapAPI.getQuote({
         fromChain,
         toChain,
@@ -90,6 +128,7 @@ export default function SwapScreen() {
       setQuote(response.data);
     } catch (error) {
       setQuote(null);
+      setErrorMessage(error.response?.data?.message || 'Unable to get a quote.');
     } finally {
       setLoadingQuote(false);
     }
@@ -98,7 +137,13 @@ export default function SwapScreen() {
   const handleSwap = async () => {
     if (!amount || Number(amount) <= 0) return;
 
+    if (Number(fromBalance) < Number(amount)) {
+      setErrorMessage(`Insufficient available ${fromToken} balance`);
+      return;
+    }
+
     setLoadingSwap(true);
+    setErrorMessage('');
     try {
       await swapAPI.execute({
         fromChain,
@@ -113,22 +158,41 @@ export default function SwapScreen() {
       await loadData();
     } catch (error) {
       console.log('Swap failed:', error);
+      setErrorMessage(error.response?.data?.message || 'Swap failed.');
     } finally {
       setLoadingSwap(false);
     }
   };
 
   const fromBalance = wallet?.balances?.[fromToken] || 0;
-  const ngnEstimate = Number(prices[fromToken]?.ngn || 0) * Number(amount || 0);
+  const usdToNgn = Number(prices.USDT?.ngn || 1500) / Number(prices.USDT?.usd || 1);
+  const ngnEstimate = fromToken === 'USD'
+    ? usdToNgn * Number(amount || 0)
+    : Number(prices[fromToken]?.ngn || 0) * Number(amount || 0);
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Swap</Text>
-        <Text style={styles.headerSubtitle}>Quotes, execution, and recent swap history</Text>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={22} color={colors.text} />
+          </TouchableOpacity>
+          <View>
+            <Text style={styles.headerTitle}>Swap</Text>
+            <Text style={styles.headerSubtitle}>Quotes, execution, and recent swap history</Text>
+          </View>
+        </View>
+        <TouchableOpacity style={[styles.notifBtn, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => navigation.navigate('Notifications')}>
+          <Ionicons name="notifications-outline" size={22} color={colors.text} />
+          {unreadCount > 0 && (
+            <View style={styles.notifBadge}>
+              <Text style={styles.notifBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
         <View style={styles.tokenCard}>
           <Text style={styles.sectionTitle}>From</Text>
           <View style={styles.chainRow}>
@@ -139,7 +203,7 @@ export default function SwapScreen() {
                 onPress={() => setFromChain(chain)}
               >
                 <Text style={[styles.chainChipText, fromChain === chain && styles.chainChipTextActive]}>
-                  {chain}
+                  {chain === 'fiat' ? 'fiat' : chain}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -193,7 +257,7 @@ export default function SwapScreen() {
                 onPress={() => setToChain(chain)}
               >
                 <Text style={[styles.chainChipText, toChain === chain && styles.chainChipTextActive]}>
-                  {chain}
+                  {chain === 'fiat' ? 'fiat' : chain}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -237,6 +301,8 @@ export default function SwapScreen() {
           </TouchableOpacity>
         </View>
 
+        {errorMessage ? <Text style={styles.errorText}>{errorMessage}</Text> : null}
+
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Quote details</Text>
           {quote ? (
@@ -255,7 +321,7 @@ export default function SwapScreen() {
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>ETA</Text>
-                <Text style={styles.infoValue}>{quote.estimatedTime ? `${quote.estimatedTime}s` : 'Instant'}</Text>
+                <Text style={styles.infoValue}>{quote.type === 'ledger-fx' ? `1 ${fromToken} = ${quote.exchangeRate} ${toToken}` : quote.estimatedTime ? `${quote.estimatedTime}s` : 'Instant'}</Text>
               </View>
             </>
           ) : (
@@ -295,9 +361,24 @@ const createStyles = (colors) =>
       backgroundColor: colors.background
     },
     header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
       paddingHorizontal: 20,
       paddingTop: 20,
       paddingBottom: 12
+    },
+    headerLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10
+    },
+    backBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      justifyContent: 'center',
+      alignItems: 'center'
     },
     headerTitle: {
       fontSize: 26,
@@ -308,9 +389,37 @@ const createStyles = (colors) =>
       color: colors.textMuted,
       marginTop: 4
     },
+    notifBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      borderWidth: 1,
+      justifyContent: 'center',
+      alignItems: 'center'
+    },
+    notifBadge: {
+      position: 'absolute',
+      top: -2,
+      right: -2,
+      backgroundColor: '#ef4444',
+      borderRadius: 8,
+      minWidth: 16,
+      height: 16,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 3
+    },
+    notifBadgeText: {
+      color: '#fff',
+      fontSize: 9,
+      fontWeight: 'bold'
+    },
     content: {
       flex: 1,
       padding: 20
+    },
+    contentContainer: {
+      paddingBottom: 120
     },
     tokenCard: {
       backgroundColor: colors.surface,
@@ -401,6 +510,11 @@ const createStyles = (colors) =>
       gap: 12,
       marginTop: 20,
       marginBottom: 20
+    },
+    errorText: {
+      color: colors.danger || '#ef4444',
+      fontWeight: '600',
+      marginBottom: 16
     },
     secondaryButton: {
       flex: 1,
