@@ -73,7 +73,7 @@ export default function WithdrawScreen({ navigation }) {
 
   const handleFiatWithdraw = async () => {
     const numericAmount = Number(amount);
-    if (!selectedBank || !numericAmount || pin.length < 4) {
+    if (!selectedBank || !numericAmount || pin.length !== 4) {
       return;
     }
 
@@ -110,7 +110,7 @@ export default function WithdrawScreen({ navigation }) {
 
   const handleCryptoWithdraw = async () => {
     const numericAmount = Number(amount);
-    if (!destinationAddress || !numericAmount || pin.length < 4) {
+    if (!destinationAddress || !numericAmount || pin.length !== 4) {
       return;
     }
 
@@ -262,7 +262,7 @@ export default function WithdrawScreen({ navigation }) {
                 placeholder="Enter PIN"
                 placeholderTextColor={colors.textMuted}
                 secureTextEntry
-                maxLength={6}
+                maxLength={4}
               />
 
               {otpRequired && (
@@ -352,7 +352,7 @@ export default function WithdrawScreen({ navigation }) {
                 placeholder="Enter PIN"
                 placeholderTextColor={colors.textMuted}
                 secureTextEntry
-                maxLength={6}
+                maxLength={4}
               />
 
               {otpRequired && (

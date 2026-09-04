@@ -9,6 +9,8 @@ import { useAppTheme } from '../theme/ThemeProvider';
 import WelcomeScreen from '../screens/auth/WelcomeScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import CreateWalletScreen from '../screens/auth/CreateWalletScreen';
+import EmailVerificationScreen from '../screens/auth/EmailVerificationScreen';
+import PasswordResetScreen from '../screens/auth/PasswordResetScreen';
 
 // Main Screens
 import HomeScreen from '../screens/home/HomeScreen';
@@ -59,6 +61,18 @@ const AuthNavigator = () => {
       <Stack.Screen name="Welcome" component={WelcomeScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="CreateWallet" component={CreateWalletScreen} />
+      <Stack.Screen name="PasswordReset" component={PasswordResetScreen} />
+    </Stack.Navigator>
+  );
+};
+
+const EmailVerificationNavigator = () => {
+  const { colors } = useAppTheme();
+  return (
+    <Stack.Navigator
+      screenOptions={{ headerShown: false, cardStyle: { backgroundColor: colors.background } }}
+    >
+      <Stack.Screen name="EmailVerification" component={EmailVerificationScreen} initialParams={{ required: true }} />
     </Stack.Navigator>
   );
 };
@@ -140,6 +154,7 @@ const MainStackNavigator = () => {
       <Stack.Screen name="KeyManagement" component={KeyManagementScreen} />
       <Stack.Screen name="UsernameSettings" component={UsernameSettingsScreen} />
       <Stack.Screen name="SecuritySettings" component={SecuritySettingsScreen} />
+      <Stack.Screen name="EmailVerification" component={EmailVerificationScreen} />
       <Stack.Screen name="TransactionDetails" component={TransactionDetailsScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="Bills" component={BillsScreen} />
@@ -155,10 +170,14 @@ const MainStackNavigator = () => {
   );
 };
 
-const AppNavigator = ({ isAuthenticated }) => {
+const AppNavigator = ({ isAuthenticated, user }) => {
+  const requiresEmailVerification = isAuthenticated && user?.emailVerified !== true;
+
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {isAuthenticated ? (
+      {requiresEmailVerification ? (
+        <Stack.Screen name="EmailVerificationGate" component={EmailVerificationNavigator} />
+      ) : isAuthenticated ? (
         <Stack.Screen name="Main" component={MainStackNavigator} />
       ) : (
         <Stack.Screen name="Auth" component={AuthNavigator} />

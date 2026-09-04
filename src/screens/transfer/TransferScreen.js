@@ -134,8 +134,8 @@ export default function TransferScreen({ navigation }) {
   };
 
   const confirmTransfer = async () => {
-    if (pin.length < 4 || pin.length > 6) {
-      Alert.alert('Error', 'Please enter your 4 to 6 digit PIN');
+    if (pin.length !== 4) {
+      Alert.alert('Error', 'Please enter your 4-digit PIN');
       return;
     }
 
@@ -589,7 +589,7 @@ export default function TransferScreen({ navigation }) {
             <TouchableOpacity
               style={styles.pinConfirmBtn}
               onPress={confirmTransfer}
-              disabled={pin.length < 4 || pin.length > 6 || isSubmitting}
+              disabled={pin.length !== 4 || isSubmitting}
             >
               {isSubmitting ? (
                 <ActivityIndicator size="small" color="#0a0a0f" />

@@ -37,18 +37,18 @@ export default function BillPinModal({
             value={pin}
             onChangeText={setPin}
             keyboardType="number-pad"
-            maxLength={6}
+            maxLength={4}
             secureTextEntry
-            placeholder="------"
+            placeholder="----"
             placeholderTextColor={colors.textMuted}
             textAlign="center"
             autoFocus
           />
 
           <TouchableOpacity
-            style={[styles.primaryButton, (pin.length < 4 || loading) && styles.disabledButton]}
+            style={[styles.primaryButton, (pin.length !== 4 || loading) && styles.disabledButton]}
             onPress={onConfirm}
-            disabled={pin.length < 4 || loading}
+            disabled={pin.length !== 4 || loading}
           >
             {loading ? (
               <ActivityIndicator size="small" color={colors.black} />

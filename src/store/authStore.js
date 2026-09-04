@@ -137,6 +137,21 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
+  setupPin: async (pin) => {
+    try {
+      await authAPI.setupPin(pin);
+      const updatedUser = { ...get().user, hasTransactionPin: true };
+      await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+      set({ user: updatedUser });
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to set PIN'
+      };
+    }
+  },
+
   updateProfile: async (updates) => {
     try {
       const response = await authAPI.updateProfile(updates);
@@ -242,14 +257,26 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  setupPin: async (pin) => {
+  requestPasswordResetOtp: async (email) => {
     try {
-      await authAPI.setupPin(pin);
-      return { success: true };
+      const response = await authAPI.requestPasswordResetOtp(email);
+      return { success: true, ...response.data };
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Failed to set PIN'
+        error: error.response?.data?.message || 'Failed to send password reset code'
+      };
+    }
+  },
+
+  resetPasswordWithOtp: async (email, code, newPassword) => {
+    try {
+      const response = await authAPI.resetPasswordWithOtp(email, code, newPassword);
+      return { success: true, ...response.data };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to reset password'
       };
     }
   },

@@ -17,14 +17,14 @@ import { useAuthStore } from '../../store/authStore';
 import { useAppTheme } from '../../theme/ThemeProvider';
 
 export default function SecuritySettingsScreen({ navigation }) {
-  const { user, changePin, verifyPin } = useAuthStore();
+  const { user, setupPin, changePin, verifyPin } = useAuthStore();
   const { colors } = useAppTheme();
   
   const [showChangePinModal, setShowChangePinModal] = useState(false);
   const [currentPin, setCurrentPin] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
-  const [pinStep, setPinStep] = useState(1); // 1: current, 2: new, 3: confirm
+  const [pinStep, setPinStep] = useState(user?.hasTransactionPin ? 1 : 2); // 1: current, 2: new, 3: confirm
   const [isProcessing, setIsProcessing] = useState(false);
   
   const [biometricEnabled, setBiometricEnabled] = useState(false);
@@ -33,8 +33,8 @@ export default function SecuritySettingsScreen({ navigation }) {
 
   const handleChangePin = async () => {
     if (pinStep === 1) {
-      if (currentPin.length !== 6) {
-        Alert.alert('Error', 'Please enter your current 6-digit PIN');
+      if (currentPin.length !== 4) {
+        Alert.alert('Error', 'Please enter your current 4-digit PIN');
         return;
       }
       setIsProcessing(true);
@@ -52,8 +52,8 @@ export default function SecuritySettingsScreen({ navigation }) {
         setIsProcessing(false);
       }
     } else if (pinStep === 2) {
-      if (newPin.length !== 6) {
-        Alert.alert('Error', 'PIN must be 6 digits');
+      if (newPin.length !== 4) {
+        Alert.alert('Error', 'PIN must be exactly 4 digits');
         return;
       }
       if (newPin === currentPin) {
@@ -70,7 +70,9 @@ export default function SecuritySettingsScreen({ navigation }) {
       
       setIsProcessing(true);
       try {
-        const result = await changePin(currentPin, newPin);
+        const result = user?.hasTransactionPin
+          ? await changePin(currentPin, newPin)
+          : await setupPin(newPin);
         if (result.success) {
           Alert.alert(
             'Success',
@@ -90,7 +92,7 @@ export default function SecuritySettingsScreen({ navigation }) {
 
   const closePinModal = () => {
     setShowChangePinModal(false);
-    setPinStep(1);
+    setPinStep(user?.hasTransactionPin ? 1 : 2);
     setCurrentPin('');
     setNewPin('');
     setConfirmPin('');
@@ -107,8 +109,8 @@ export default function SecuritySettingsScreen({ navigation }) {
 
   const getPinStepSubtitle = () => {
     switch (pinStep) {
-      case 1: return 'Please enter your current 6-digit PIN';
-      case 2: return 'Create a new 6-digit PIN';
+      case 1: return 'Please enter your current 4-digit PIN';
+      case 2: return 'Create a new 4-digit PIN';
       case 3: return 'Re-enter your new PIN to confirm';
       default: return '';
     }
@@ -135,8 +137,8 @@ export default function SecuritySettingsScreen({ navigation }) {
     {
       id: 'changePin',
       icon: 'keypad-outline',
-      title: 'Change PIN',
-      subtitle: 'Update your 6-digit PIN',
+      title: user?.hasTransactionPin ? 'Change PIN' : 'Set transaction PIN',
+      subtitle: user?.hasTransactionPin ? 'Update your 4-digit PIN' : 'Create a 4-digit PIN for transactions',
       color: '#f59e0b',
       action: () => setShowChangePinModal(true),
     },
@@ -269,16 +271,16 @@ export default function SecuritySettingsScreen({ navigation }) {
               value={getPinValue()}
               onChangeText={setPinValue}
               keyboardType="number-pad"
-              maxLength={6}
+              maxLength={4}
               secureTextEntry
-              placeholder="------"
+              placeholder="----"
               placeholderTextColor={colors.textMuted}
               textAlign="center"
               autoFocus
             />
 
             <View style={styles.pinDots}>
-              {[0, 1, 2, 3, 4, 5].map((i) => (
+              {[0, 1, 2, 3].map((i) => (
                 <View
                   key={i}
                   style={[
@@ -291,9 +293,9 @@ export default function SecuritySettingsScreen({ navigation }) {
             </View>
 
             <TouchableOpacity
-              style={[styles.modalButton, { backgroundColor: colors.primary }, (isProcessing || getPinValue().length !== 6) && { opacity: 0.5 }]}
+              style={[styles.modalButton, { backgroundColor: colors.primary }, (isProcessing || getPinValue().length !== 4) && { opacity: 0.5 }]}
               onPress={handleChangePin}
-              disabled={isProcessing || getPinValue().length !== 6}
+              disabled={isProcessing || getPinValue().length !== 4}
             >
               {isProcessing ? (
                 <ActivityIndicator size="small" color={colors.black} />

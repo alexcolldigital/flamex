@@ -71,7 +71,7 @@ function LoadingScreen() {
 
 // Main App Component
 function AppContent() {
-  const { isAuthenticated, isLoading: authLoading, initializeAuth } = useAuthStore();
+  const { isAuthenticated, user, isLoading: authLoading, initializeAuth } = useAuthStore();
   const { initializeWallets } = useWalletStore();
   const [isInitializing, setIsInitializing] = useState(true);
   const { colors, isDark } = useAppTheme();
@@ -119,7 +119,7 @@ function AppContent() {
         }
       }}
     >
-      <AppNavigator isAuthenticated={isAuthenticated} />
+      <AppNavigator isAuthenticated={isAuthenticated} user={user} />
     </NavigationContainer>
   );
 }

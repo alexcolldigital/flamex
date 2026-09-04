@@ -20,6 +20,7 @@ const buildMenu = (colors) => [
     section: 'Account',
     items: [
       { id: 'profile', icon: 'person-outline', title: 'Profile', subtitle: 'Personal details and KYC', color: colors.accent },
+      { id: 'email', icon: 'mail-outline', title: 'Email Verification', subtitle: 'Confirm your account email', color: colors.primary },
       { id: 'kyc', icon: 'shield-checkmark-outline', title: 'KYC Verification', subtitle: 'Complete identity verification', color: colors.success },
       { id: 'username', icon: 'at-outline', title: 'Username', subtitle: 'Set username for transfers', color: colors.primary },
       { id: 'security', icon: 'shield-checkmark-outline', title: 'Security', subtitle: 'PIN, biometric, and protection', color: colors.success },
@@ -66,6 +67,9 @@ export default function SettingsScreen({ navigation }) {
     switch (id) {
       case 'profile':
         navigation.navigate('ProfileDetails');
+        break;
+      case 'email':
+        navigation.navigate('EmailVerification');
         break;
       case 'username':
         navigation.navigate('UsernameSettings');

@@ -44,6 +44,9 @@ export const authAPI = {
   requestPinResetOtp: (email) => apiClient.post('/auth/request-pin-reset-otp', { email }),
   resetPinWithOtp: (email, code, newPin) =>
     apiClient.post('/auth/reset-pin-with-otp', { email, code, newPin }),
+  requestPasswordResetOtp: (email) => apiClient.post('/auth/request-password-reset-otp', { email }),
+  resetPasswordWithOtp: (email, code, newPassword) =>
+    apiClient.post('/auth/reset-password-with-otp', { email, code, newPassword }),
   setUsername: (username) => apiClient.post('/auth/set-username', { username }),
   checkUsername: (username) => apiClient.get(`/auth/check-username/${username}`),
   updateProfile: (updates) => apiClient.put('/auth/profile', updates),
@@ -153,7 +156,7 @@ export const p2pAPI = {
   getMyOffers: () => apiClient.get('/p2p/offers/mine'),
   createOffer: (data) => apiClient.post('/p2p/offers', data),
   updateOffer: (offerId, data) => apiClient.patch(`/p2p/offers/${offerId}`, data),
-  createOrder: (offerId, cryptoAmount) => apiClient.post(`/p2p/offers/${offerId}/order`, { cryptoAmount }),
+  createOrder: (offerId, cryptoAmount, pin) => apiClient.post(`/p2p/offers/${offerId}/order`, { cryptoAmount, pin }),
   getOrders: () => apiClient.get('/p2p/orders'),
   getOrder: (orderId) => apiClient.get(`/p2p/orders/${orderId}`),
   markPaid: (orderId, data) => apiClient.post(`/p2p/orders/${orderId}/mark-paid`, data),
@@ -164,6 +167,12 @@ export const p2pAPI = {
   getDisputes: (params = {}) => apiClient.get('/p2p/disputes', { params }),
   sendDisputeMessage: (disputeId, message) => apiClient.post(`/p2p/disputes/${disputeId}/message`, { message }),
   resolveDispute: (disputeId, data) => apiClient.post(`/p2p/disputes/${disputeId}/resolve`, data)
+};
+
+export const transactionAPI = {
+  getAll: (params = {}) => apiClient.get('/transactions', { params }),
+  getReceipt: (id, sendEmail = true) =>
+    apiClient.get(`/transactions/${id}/receipt`, { params: { email: sendEmail } })
 };
 
 export const notificationAPI = {

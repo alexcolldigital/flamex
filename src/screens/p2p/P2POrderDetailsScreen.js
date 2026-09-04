@@ -11,11 +11,14 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { p2pAPI } from '../../api/client';
+import BillPinModal from '../../components/BillPinModal';
 import { p2pAmount, p2pMoney } from '../../lib/p2p';
+import { useAuthStore } from '../../store/authStore';
 import { useAppTheme } from '../../theme/ThemeProvider';
 
 export default function P2POrderDetailsScreen({ navigation, route }) {
   const { colors } = useAppTheme();
+  const { verifyPin } = useAuthStore();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const initialOffer = route.params?.offer || null;
   const offerId = route.params?.offerId || initialOffer?.id || null;
@@ -33,6 +36,8 @@ export default function P2POrderDetailsScreen({ navigation, route }) {
   const [resolutionNote, setResolutionNote] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [pin, setPin] = useState('');
+  const [pinAction, setPinAction] = useState(null);
 
   const loadOrder = async () => {
     const targetOrderId = route.params?.orderId || order?.id;
@@ -55,16 +60,34 @@ export default function P2POrderDetailsScreen({ navigation, route }) {
       return;
     }
 
+    setPinAction('create');
+    setPin('');
+  };
+
+  const confirmPinAction = async () => {
+    if (pin.length !== 4) return;
+    if (!(await verifyPin(pin))) {
+      setPin('');
+      setErrorMessage('Invalid transaction PIN.');
+      return;
+    }
+
+    const action = pinAction;
+    setPinAction(null);
     setLoading(true);
     setErrorMessage('');
     try {
-      const response = await p2pAPI.createOrder(offerId, Number(amount));
+      const response = action === 'create'
+        ? await p2pAPI.createOrder(offerId, Number(amount), pin)
+        : await p2pAPI.confirmPayment(order.id, { releaseNote, pin });
       setOrder(response.data.order);
-      Alert.alert('Order created', 'Crypto has been locked in escrow for this trade.');
+      Alert.alert(action === 'create' ? 'Order created' : 'Escrow released', action === 'create'
+        ? 'Crypto has been locked in escrow for this trade.'
+        : 'The crypto has been delivered to the buyer.');
     } catch (error) {
       const message = error.response?.data?.message || 'Unable to create order.';
       setErrorMessage(message);
-      Alert.alert('Create order failed', message);
+      Alert.alert(action === 'release' ? 'Release failed' : 'Create order failed', message);
     } finally {
       setLoading(false);
     }
@@ -86,16 +109,8 @@ export default function P2POrderDetailsScreen({ navigation, route }) {
 
   const confirmPayment = async () => {
     if (!order) return;
-    setLoading(true);
-    try {
-      const response = await p2pAPI.confirmPayment(order.id, { releaseNote });
-      setOrder(response.data.order);
-      Alert.alert('Escrow released', 'The crypto has been delivered to the buyer.');
-    } catch (error) {
-      Alert.alert('Release failed', error.response?.data?.message || 'Unable to release escrow.');
-    } finally {
-      setLoading(false);
-    }
+    setPinAction('release');
+    setPin('');
   };
 
   const cancelOrder = async () => {
@@ -341,6 +356,16 @@ export default function P2POrderDetailsScreen({ navigation, route }) {
           </View>
         ) : null}
       </ScrollView>
+      <BillPinModal
+        visible={Boolean(pinAction)}
+        pin={pin}
+        setPin={setPin}
+        loading={loading}
+        onConfirm={confirmPinAction}
+        onClose={() => setPinAction(null)}
+        title={pinAction === 'release' ? 'Release escrow' : 'Create P2P order'}
+        subtitle="Enter your 4-digit transaction PIN before continuing"
+      />
     </View>
   );
 }

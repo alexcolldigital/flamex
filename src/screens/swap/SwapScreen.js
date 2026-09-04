@@ -12,7 +12,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import { Ionicons } from '@expo/vector-icons';
 import { priceAPI, swapAPI, walletAPI } from '../../api/client';
+import BillPinModal from '../../components/BillPinModal';
 import { currencyFormatter, normalizeTransaction, tokenFormatter } from '../../lib/finance';
+import { useAuthStore } from '../../store/authStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useAppTheme } from '../../theme/ThemeProvider';
 
@@ -20,6 +22,7 @@ const CHAIN_OPTIONS = ['fiat', 'solana', 'ethereum'];
 
 export default function SwapScreen({ navigation }) {
   const { colors } = useAppTheme();
+  const { verifyPin } = useAuthStore();
   const { unreadCount, initializeNotifications } = useNotificationStore();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const [wallet, setWallet] = useState(null);
@@ -35,6 +38,8 @@ export default function SwapScreen({ navigation }) {
   const [loadingQuote, setLoadingQuote] = useState(false);
   const [loadingSwap, setLoadingSwap] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [pin, setPin] = useState('');
+  const [showPinModal, setShowPinModal] = useState(false);
 
   const loadData = async () => {
     try {
@@ -142,6 +147,21 @@ export default function SwapScreen({ navigation }) {
       return;
     }
 
+    setPin('');
+    setShowPinModal(true);
+  };
+
+  const confirmSwap = async () => {
+    if (pin.length !== 4) return;
+
+    const isValid = await verifyPin(pin);
+    if (!isValid) {
+      setPin('');
+      setErrorMessage('Invalid transaction PIN.');
+      return;
+    }
+
+    setShowPinModal(false);
     setLoadingSwap(true);
     setErrorMessage('');
     try {
@@ -151,7 +171,8 @@ export default function SwapScreen({ navigation }) {
         fromToken,
         toToken,
         fromAmount: Number(amount),
-        toAmount: quote?.toAmount ? Number(quote.toAmount) : undefined
+        toAmount: quote?.toAmount ? Number(quote.toAmount) : undefined,
+        pin
       });
       setAmount('');
       setQuote(null);
@@ -350,6 +371,16 @@ export default function SwapScreen({ navigation }) {
           )}
         </View>
       </ScrollView>
+      <BillPinModal
+        visible={showPinModal}
+        pin={pin}
+        setPin={setPin}
+        loading={loadingSwap}
+        onConfirm={confirmSwap}
+        onClose={() => setShowPinModal(false)}
+        title="Confirm swap"
+        subtitle="Enter your 4-digit transaction PIN before completing this swap"
+      />
     </SafeAreaView>
   );
 }
