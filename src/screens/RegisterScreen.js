@@ -184,7 +184,7 @@ export default function RegisterScreen({ navigation }) {
                 onChangeText={(text) => updateField('password', text)}
                 secureTextEntry={!showPassword}
               />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
                 <Icon
                   name={showPassword ? 'eye-off' : 'eye'}
                   size={20}
@@ -202,7 +202,7 @@ export default function RegisterScreen({ navigation }) {
                 onChangeText={(text) => updateField('confirmPassword', text)}
                 secureTextEntry={!showConfirmPassword}
               />
-              <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+              <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeBtn}>
                 <Icon name={showConfirmPassword ? 'eye-off' : 'eye'} size={20} color="#666" />
               </TouchableOpacity>
             </View>
@@ -311,8 +311,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#1a1a1a',
     borderRadius: 12,
-    paddingHorizontal: 16,
+    paddingLeft: 16,
+    paddingRight: 12,
     height: 56,
+  },
+  eyeBtn: {
+    padding: 6,
   },
   inputIcon: {
     marginRight: 12,

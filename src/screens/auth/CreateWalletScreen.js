@@ -38,6 +38,8 @@ export default function CreateWalletScreen({ navigation }) {
   const [selectedChains, setSelectedChains] = useState(['solana']);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuggestingUsername, setIsSuggestingUsername] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [userData, setUserData] = useState({
     firstName: '',
     lastName: '',
@@ -45,6 +47,7 @@ export default function CreateWalletScreen({ navigation }) {
     phone: '',
     username: '',
     password: '',
+    confirmPassword: '',
     referralCode: ''
   });
 
@@ -108,9 +111,17 @@ export default function CreateWalletScreen({ navigation }) {
   };
 
   const handleRegister = async () => {
-    const { firstName, lastName, email, phone, username, password } = userData;
-    if (!firstName || !lastName || !email || !phone || !username || !password) {
+    const { firstName, lastName, email, phone, username, password, confirmPassword } = userData;
+    if (!firstName || !lastName || !email || !phone || !username || !password || !confirmPassword) {
       Alert.alert('Missing details', 'Fill in all account fields to continue.');
+      return;
+    }
+    if (password.length < 8) {
+      Alert.alert('Invalid password', 'Password must be at least 8 characters.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      Alert.alert('Passwords do not match', 'Enter the same password in both fields.');
       return;
     }
     if (!/^[a-zA-Z0-9_]{3,30}$/.test(username)) {
@@ -119,8 +130,9 @@ export default function CreateWalletScreen({ navigation }) {
     }
 
     setIsLoading(true);
+    const { confirmPassword: unusedConfirmPassword, ...registrationData } = userData;
     const result = await register({
-      ...userData,
+      ...registrationData,
       mnemonic,
       wallets: generateWallets(),
       referralCode: userData.referralCode ? userData.referralCode.trim().toUpperCase() : undefined
@@ -231,7 +243,6 @@ export default function CreateWalletScreen({ navigation }) {
                 ['lastName', 'Last name'],
                 ['email', 'Email'],
                 ['phone', 'Phone'],
-                ['password', 'Password'],
                 ['referralCode', 'Referral code (optional)']
               ].map(([key, label]) => (
                 <TextInput
@@ -243,8 +254,33 @@ export default function CreateWalletScreen({ navigation }) {
                   placeholderTextColor={colors.textMuted}
                   keyboardType={key === 'email' ? 'email-address' : key === 'phone' ? 'phone-pad' : 'default'}
                   autoCapitalize={key === 'referralCode' || key === 'username' || key === 'email' ? 'none' : 'words'}
-                  secureTextEntry={key === 'password'}
+                  secureTextEntry={false}
                 />
+              ))}
+
+              {[
+                ['password', 'Password', showPassword, setShowPassword],
+                ['confirmPassword', 'Confirm password', showConfirmPassword, setShowConfirmPassword]
+              ].map(([key, label, isVisible, setIsVisible]) => (
+                <View key={key} style={styles.passwordField}>
+                  <TextInput
+                    style={[styles.input, styles.passwordInput]}
+                    value={userData[key]}
+                    onChangeText={(value) => setUserData((current) => ({ ...current, [key]: value }))}
+                    placeholder={label}
+                    placeholderTextColor={colors.textMuted}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    secureTextEntry={!isVisible}
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeButton}
+                    onPress={() => setIsVisible((visible) => !visible)}
+                    accessibilityLabel={isVisible ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
+                  >
+                    <Ionicons name={isVisible ? 'eye-off-outline' : 'eye-outline'} size={21} color={colors.textMuted} />
+                  </TouchableOpacity>
+                </View>
               ))}
 
               <View style={styles.usernameSection}>
@@ -382,6 +418,19 @@ const createStyles = (colors) =>
       color: colors.textMuted,
       fontSize: 12,
       marginTop: 6
+    },
+    passwordField: {
+      position: 'relative'
+    },
+    passwordInput: {
+      paddingRight: 52
+    },
+    eyeButton: {
+      position: 'absolute',
+      right: 14,
+      top: 0,
+      bottom: 12,
+      justifyContent: 'center'
     },
     card: {
       backgroundColor: colors.surface,
