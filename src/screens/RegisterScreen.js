@@ -26,6 +26,7 @@ export default function RegisterScreen({ navigation }) {
     confirmPassword: '',
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
 
@@ -199,8 +200,11 @@ export default function RegisterScreen({ navigation }) {
                 placeholderTextColor="#666"
                 value={formData.confirmPassword}
                 onChangeText={(text) => updateField('confirmPassword', text)}
-                secureTextEntry={!showPassword}
+                secureTextEntry={!showConfirmPassword}
               />
+              <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                <Icon name={showConfirmPassword ? 'eye-off' : 'eye'} size={20} color="#666" />
+              </TouchableOpacity>
             </View>
             <Text style={styles.warningText}>
               ⚠️ You will receive a 12-word seed phrase. Write it down and store it safely. Never share it with anyone.
