@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -32,6 +32,12 @@ export default function EmailVerificationScreen({ navigation, route }) {
       ? 'Check your inbox. The code expires in 10 minutes.'
       : result.error);
   };
+
+  useEffect(() => {
+    if (email && !user?.emailVerified) {
+      sendCode();
+    }
+  }, [email, user?.emailVerified]);
 
   const verifyCode = async () => {
     if (!/^\d{6}$/.test(code)) {

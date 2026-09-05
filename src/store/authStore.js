@@ -85,7 +85,10 @@ export const useAuthStore = create((set, get) => ({
         isLoading: false
       });
 
-      return { success: true };
+      return {
+        success: true,
+        requiresEmailVerification: user.emailVerified !== true
+      };
     } catch (error) {
       const message =
         error.response?.data?.message ||

@@ -139,12 +139,7 @@ export default function CreateWalletScreen({ navigation }) {
     });
     setIsLoading(false);
 
-    if (result.success) {
-      Alert.alert(
-        'Wallet created',
-        'Your account is ready. Verify your email and set your transaction PIN from Settings before using fiat and bill payments.'
-      );
-    } else {
+    if (!result.success) {
       Alert.alert('Registration failed', result.error);
     }
   };
