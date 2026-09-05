@@ -18,7 +18,7 @@ import { useAppTheme } from '../../theme/ThemeProvider';
 
 export default function P2POrderDetailsScreen({ navigation, route }) {
   const { colors } = useAppTheme();
-  const { verifyPin } = useAuthStore();
+  const { verifyPin, user } = useAuthStore();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const initialOffer = route.params?.offer || null;
   const offerId = route.params?.offerId || initialOffer?.id || null;
@@ -33,14 +33,14 @@ export default function P2POrderDetailsScreen({ navigation, route }) {
   const [disputeNote, setDisputeNote] = useState('');
   const [disputeUrl, setDisputeUrl] = useState('');
   const [chatMessage, setChatMessage] = useState('');
+  const [disputeChatMessage, setDisputeChatMessage] = useState('');
   const [resolutionNote, setResolutionNote] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [pin, setPin] = useState('');
   const [pinAction, setPinAction] = useState(null);
 
-  const loadOrder = async () => {
-    const targetOrderId = route.params?.orderId || order?.id;
+  const loadOrder = async (targetOrderId = route.params?.orderId || order?.id) => {
     if (!targetOrderId) return;
     try {
       const response = await p2pAPI.getOrder(targetOrderId);
@@ -53,6 +53,15 @@ export default function P2POrderDetailsScreen({ navigation, route }) {
   useEffect(() => {
     loadOrder();
   }, [route.params?.orderId]);
+
+  useEffect(() => {
+    if (!order?.id || !['awaiting_payment', 'payment_sent', 'awaiting_release', 'disputed'].includes(order.status)) {
+      return undefined;
+    }
+
+    const refreshTimer = setInterval(() => loadOrder(order.id), 5000);
+    return () => clearInterval(refreshTimer);
+  }, [order?.id, order?.status]);
 
   const createOrder = async () => {
     if (!offerId || !amount) {
@@ -163,11 +172,11 @@ export default function P2POrderDetailsScreen({ navigation, route }) {
   };
 
   const sendDisputeMessage = async () => {
-    if (!order?.dispute?.id || !chatMessage.trim()) return;
+    if (!order?.dispute?.id || !disputeChatMessage.trim()) return;
     setLoading(true);
     try {
-      await p2pAPI.sendDisputeMessage(order.dispute.id, chatMessage.trim());
-      setChatMessage('');
+      await p2pAPI.sendDisputeMessage(order.dispute.id, disputeChatMessage.trim());
+      setDisputeChatMessage('');
       await loadOrder();
     } catch (error) {
       Alert.alert('Message failed', error.response?.data?.message || 'Unable to send dispute message.');
@@ -308,7 +317,10 @@ export default function P2POrderDetailsScreen({ navigation, route }) {
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Trade chat</Text>
             {(order.chat || []).map((message, index) => (
-              <View key={`${message.createdAt}-${index}`} style={styles.messageBubble}>
+              <View key={`${message.createdAt}-${index}`} style={[
+                styles.messageBubble,
+                String(message.senderUserId) === String(user?._id || user?.id) && styles.ownMessageBubble
+              ]}>
                 <Text style={styles.messageLabel}>{message.senderLabel || 'Message'}</Text>
                 <Text style={styles.bodyText}>{message.message}</Text>
               </View>
@@ -334,7 +346,7 @@ export default function P2POrderDetailsScreen({ navigation, route }) {
                 <Text style={styles.bodyText}>{message.message}</Text>
               </View>
             ))}
-            <TextInput style={styles.input} value={chatMessage} onChangeText={setChatMessage} placeholder="Send an update to the dispute room" placeholderTextColor={colors.textMuted} />
+            <TextInput style={styles.input} value={disputeChatMessage} onChangeText={setDisputeChatMessage} placeholder="Send an update to the dispute room" placeholderTextColor={colors.textMuted} />
             <TouchableOpacity style={styles.secondaryButton} onPress={sendDisputeMessage} disabled={loading}>
               <Text style={styles.secondaryButtonText}>Send dispute message</Text>
             </TouchableOpacity>
@@ -396,5 +408,6 @@ const createStyles = (colors) =>
     ghostButtonText: { color: colors.textMuted, fontWeight: '700' },
     actionRow: { flexDirection: 'row', gap: 10 },
     messageBubble: { marginTop: 12, padding: 12, borderRadius: 12, backgroundColor: colors.surfaceMuted },
+    ownMessageBubble: { backgroundColor: colors.primarySoft, borderColor: colors.primary, borderWidth: 1 },
     messageLabel: { color: colors.text, fontWeight: '700', marginBottom: 4 }
   });
