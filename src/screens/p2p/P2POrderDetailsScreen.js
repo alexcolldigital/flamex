@@ -26,7 +26,6 @@ export default function P2POrderDetailsScreen({ navigation, route }) {
   const [order, setOrder] = useState(null);
   const [amount, setAmount] = useState(initialOffer?.minOrderAmount ? String(initialOffer.minOrderAmount) : '');
   const [proofNote, setProofNote] = useState('');
-  const [proofUrl, setProofUrl] = useState('');
   const [releaseNote, setReleaseNote] = useState('');
   const [cancelReason, setCancelReason] = useState('');
   const [disputeReason, setDisputeReason] = useState('');
@@ -106,7 +105,7 @@ export default function P2POrderDetailsScreen({ navigation, route }) {
     if (!order) return;
     setLoading(true);
     try {
-      const response = await p2pAPI.markPaid(order.id, { proofNote, proofUrl });
+      const response = await p2pAPI.markPaid(order.id, { proofNote });
       setOrder(response.data.order);
       Alert.alert('Payment sent', 'The seller has been notified to review and release escrow.');
     } catch (error) {
@@ -278,7 +277,6 @@ export default function P2POrderDetailsScreen({ navigation, route }) {
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Buyer action</Text>
             <TextInput style={styles.input} value={proofNote} onChangeText={setProofNote} placeholder="Payment note / reference" placeholderTextColor={colors.textMuted} />
-            <TextInput style={styles.input} value={proofUrl} onChangeText={setProofUrl} placeholder="Proof URL (optional)" placeholderTextColor={colors.textMuted} />
             <TouchableOpacity style={styles.primaryButton} onPress={markPaid} disabled={loading}>
               <Text style={styles.primaryButtonText}>I have paid the seller</Text>
             </TouchableOpacity>

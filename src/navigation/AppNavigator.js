@@ -11,6 +11,7 @@ import LoginScreen from '../screens/auth/LoginScreen';
 import CreateWalletScreen from '../screens/auth/CreateWalletScreen';
 import EmailVerificationScreen from '../screens/auth/EmailVerificationScreen';
 import PasswordResetScreen from '../screens/auth/PasswordResetScreen';
+import TransactionPinSetupScreen from '../screens/auth/TransactionPinSetupScreen';
 
 // Main Screens
 import HomeScreen from '../screens/home/HomeScreen';
@@ -73,6 +74,17 @@ const EmailVerificationNavigator = () => {
       screenOptions={{ headerShown: false, cardStyle: { backgroundColor: colors.background } }}
     >
       <Stack.Screen name="EmailVerification" component={EmailVerificationScreen} initialParams={{ required: true }} />
+    </Stack.Navigator>
+  );
+};
+
+const TransactionPinSetupNavigator = () => {
+  const { colors } = useAppTheme();
+  return (
+    <Stack.Navigator
+      screenOptions={{ headerShown: false, cardStyle: { backgroundColor: colors.background } }}
+    >
+      <Stack.Screen name="TransactionPinSetup" component={TransactionPinSetupScreen} />
     </Stack.Navigator>
   );
 };
@@ -172,11 +184,14 @@ const MainStackNavigator = () => {
 
 const AppNavigator = ({ isAuthenticated, user }) => {
   const requiresEmailVerification = isAuthenticated && user?.emailVerified !== true;
+  const requiresTransactionPin = isAuthenticated && user?.emailVerified === true && user?.hasTransactionPin !== true;
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {requiresEmailVerification ? (
         <Stack.Screen name="EmailVerificationGate" component={EmailVerificationNavigator} />
+      ) : requiresTransactionPin ? (
+        <Stack.Screen name="TransactionPinSetupGate" component={TransactionPinSetupNavigator} />
       ) : isAuthenticated ? (
         <Stack.Screen name="Main" component={MainStackNavigator} />
       ) : (
