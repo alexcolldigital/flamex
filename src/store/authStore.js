@@ -87,7 +87,8 @@ export const useAuthStore = create((set, get) => ({
 
       return {
         success: true,
-        requiresEmailVerification: user.emailVerified !== true
+        requiresEmailVerification: user.emailVerified !== true,
+        emailVerificationSent: response.data.emailVerificationSent === true
       };
     } catch (error) {
       const message =

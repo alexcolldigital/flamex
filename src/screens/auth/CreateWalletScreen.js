@@ -139,7 +139,12 @@ export default function CreateWalletScreen({ navigation }) {
     });
     setIsLoading(false);
 
-    if (!result.success) {
+    if (result.success && result.requiresEmailVerification) {
+      navigation.getParent()?.reset({
+        index: 0,
+        routes: [{ name: 'EmailVerificationGate' }]
+      });
+    } else if (!result.success) {
       Alert.alert('Registration failed', result.error);
     }
   };
