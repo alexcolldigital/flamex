@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  Modal,
   TouchableOpacity,
   RefreshControl,
   Alert,
@@ -38,6 +39,7 @@ export default function NotificationsScreen({ navigation }) {
   } = useNotificationStore();
 
   const [refreshing, setRefreshing] = React.useState(false);
+  const [deleteTargetId, setDeleteTargetId] = React.useState(null);
 
   useEffect(() => {
     initializeNotifications();
@@ -72,14 +74,13 @@ export default function NotificationsScreen({ navigation }) {
   };
 
   const handleDelete = (id) => {
-    Alert.alert(
-      'Delete Notification',
-      'Are you sure you want to delete this notification?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => deleteNotification(id) },
-      ]
-    );
+    setDeleteTargetId(id);
+  };
+
+  const confirmDelete = () => {
+    const id = deleteTargetId;
+    setDeleteTargetId(null);
+    if (id) deleteNotification(id);
   };
 
   const formatTime = (dateString) => {
@@ -119,7 +120,13 @@ export default function NotificationsScreen({ navigation }) {
           </Text>
         </View>
         {!notification.read && <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />}
-        <TouchableOpacity style={styles.deleteButton} onPress={() => handleDelete(notification.id)}>
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={(event) => {
+            event.stopPropagation();
+            handleDelete(notification.id);
+          }}
+        >
           <Ionicons name="close-outline" size={18} color={colors.textMuted} />
         </TouchableOpacity>
       </TouchableOpacity>
@@ -175,6 +182,31 @@ export default function NotificationsScreen({ navigation }) {
           </View>
         )}
       </ScrollView>
+
+      <Modal
+        transparent
+        visible={Boolean(deleteTargetId)}
+        animationType="fade"
+        onRequestClose={() => setDeleteTargetId(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View style={[styles.modalIcon, { backgroundColor: colors.dangerSoft }]}>
+              <Ionicons name="trash-outline" size={24} color={colors.danger} />
+            </View>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Delete notification?</Text>
+            <Text style={[styles.modalMessage, { color: colors.textMuted }]}>This notification will be permanently removed.</Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={[styles.modalCancel, { borderColor: colors.border }]} onPress={() => setDeleteTargetId(null)}>
+                <Text style={[styles.modalCancelText, { color: colors.text }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalConfirm, { backgroundColor: colors.danger }]} onPress={confirmDelete}>
+                <Text style={styles.modalConfirmText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -207,4 +239,32 @@ const styles = StyleSheet.create({
   body: { fontSize: 13, marginTop: 4, lineHeight: 18 },
   unreadDot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
   deleteButton: { padding: 4 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalBox: {
+    borderRadius: 16,
+    padding: 24,
+    marginHorizontal: 32,
+    width: '85%',
+    borderWidth: 1,
+  },
+  modalIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
+  modalMessage: { fontSize: 14, lineHeight: 20, marginBottom: 24 },
+  modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
+  modalCancel: { borderWidth: 1, borderRadius: 10, paddingVertical: 11, paddingHorizontal: 18 },
+  modalCancelText: { fontSize: 14, fontWeight: '600' },
+  modalConfirm: { borderRadius: 10, paddingVertical: 11, paddingHorizontal: 18 },
+  modalConfirmText: { color: '#fff', fontSize: 14, fontWeight: '600' },
 });

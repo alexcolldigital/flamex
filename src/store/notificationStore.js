@@ -58,6 +58,7 @@ export const useNotificationStore = create((set, get) => ({
       await notificationAPI.markRead(id);
     } catch (error) {
       console.error('Mark notification as read error:', error);
+      return false;
     }
     const updated = notifications.map(n => 
       n.id === id ? { ...n, read: true } : n
@@ -68,6 +69,7 @@ export const useNotificationStore = create((set, get) => ({
       notifications: updated,
       unreadCount: newUnreadCount
     });
+    return true;
   },
 
   markAllAsRead: async () => {
@@ -75,6 +77,7 @@ export const useNotificationStore = create((set, get) => ({
       await notificationAPI.markAllRead();
     } catch (error) {
       console.error('Mark all notifications as read error:', error);
+      return false;
     }
     const { notifications } = get();
     const updated = notifications.map(n => ({ ...n, read: true }));
@@ -83,6 +86,7 @@ export const useNotificationStore = create((set, get) => ({
       notifications: updated,
       unreadCount: 0
     });
+    return true;
   },
 
   deleteNotification: async (id) => {
@@ -90,6 +94,7 @@ export const useNotificationStore = create((set, get) => ({
       await notificationAPI.deleteOne(id);
     } catch (error) {
       console.error('Delete notification error:', error);
+      return false;
     }
     const { notifications } = get();
     const updated = notifications.filter(n => n.id !== id);
@@ -99,6 +104,7 @@ export const useNotificationStore = create((set, get) => ({
       notifications: updated,
       unreadCount: newUnreadCount
     });
+    return true;
   },
 
   clearAll: async () => {
@@ -106,8 +112,10 @@ export const useNotificationStore = create((set, get) => ({
       await notificationAPI.clearAll();
     } catch (error) {
       console.error('Clear notifications error:', error);
+      return false;
     }
     set({ notifications: [], unreadCount: 0 });
+    return true;
   },
 
   setPushToken: (token) => {
