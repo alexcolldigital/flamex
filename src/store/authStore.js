@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
-import { authAPI } from '../api/client';
+import { authAPI, getApiErrorMessage } from '../api/client';
 
 const persistSession = async (token, user, emailVerificationSent = false) => {
   await AsyncStorage.setItem('token', token);
@@ -70,7 +70,7 @@ export const useAuthStore = create((set, get) => ({
 
       return { success: true };
     } catch (error) {
-      const message = error.response?.data?.message || 'Login failed';
+      const message = getApiErrorMessage(error, 'Login failed. Please check your details and try again.');
       set({ error: message, isLoading: false });
       return { success: false, error: message };
     }
@@ -97,10 +97,7 @@ export const useAuthStore = create((set, get) => ({
         emailVerificationSent: response.data.emailVerificationSent === true
       };
     } catch (error) {
-      const message =
-        error.response?.data?.message ||
-        error.response?.data?.errors?.[0]?.msg ||
-        'Registration failed';
+      const message = getApiErrorMessage(error, 'Registration failed. Please try again.');
       set({ error: message, isLoading: false });
       return { success: false, error: message };
     }
@@ -131,7 +128,7 @@ export const useAuthStore = create((set, get) => ({
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Failed to set username'
+        error: getApiErrorMessage(error, 'Failed to set username')
       };
     }
   },
@@ -143,7 +140,7 @@ export const useAuthStore = create((set, get) => ({
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Failed to change PIN'
+        error: getApiErrorMessage(error, 'Failed to change PIN')
       };
     }
   },
@@ -158,7 +155,7 @@ export const useAuthStore = create((set, get) => ({
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Failed to set PIN'
+        error: getApiErrorMessage(error, 'Failed to set PIN')
       };
     }
   },
@@ -173,7 +170,7 @@ export const useAuthStore = create((set, get) => ({
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Failed to update profile'
+        error: getApiErrorMessage(error, 'Failed to update profile')
       };
     }
   },
@@ -188,7 +185,7 @@ export const useAuthStore = create((set, get) => ({
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'KYC submission failed'
+        error: getApiErrorMessage(error, 'KYC submission failed')
       };
     }
   },
@@ -222,7 +219,7 @@ export const useAuthStore = create((set, get) => ({
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.message || 'Failed to send email OTP'
+        error: getApiErrorMessage(error, 'Failed to send email OTP')
       };
     }
   },

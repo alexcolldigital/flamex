@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../store/authStore';
+import InlineError from '../../components/common/InlineError';
 
 const C = {
   bg: '#080B12', card: '#111722', border: '#1E293B',
@@ -18,6 +19,7 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [focused, setFocused] = useState(null);
+  const [errorMessage, setErrorMessage] = useState('');
   const { login, isLoading } = useAuthStore();
 
   const handleLogin = async () => {
@@ -25,8 +27,18 @@ export default function LoginScreen({ navigation }) {
       Alert.alert('Error', 'Please enter email and password');
       return;
     }
-    const result = await login(email, password);
-    if (!result.success) Alert.alert('Error', result.error);
+    setErrorMessage('');
+    try {
+      const result = await login(email.trim(), password);
+      if (!result.success) {
+        setErrorMessage(result.error);
+        Alert.alert('Login failed', result.error);
+      }
+    } catch (error) {
+      const message = error?.message || 'Unable to sign in. Please try again.';
+      setErrorMessage(message);
+      Alert.alert('Login failed', message);
+    }
   };
 
   return (
@@ -43,6 +55,7 @@ export default function LoginScreen({ navigation }) {
         </View>
 
         <View style={styles.form}>
+          <InlineError message={errorMessage} onRetry={handleLogin} />
           <View style={styles.fieldWrap}>
             <Text style={styles.label}>Email</Text>
             <View style={[styles.inputRow, focused === 'email' && styles.inputFocused]}>

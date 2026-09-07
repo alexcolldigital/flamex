@@ -20,6 +20,8 @@ import {
   tokenFormatter
 } from '../../lib/finance';
 import { useAppTheme } from '../../theme/ThemeProvider';
+import InlineError from '../../components/common/InlineError';
+import { getApiErrorMessage } from '../../api/client';
 
 export default function WalletScreen({ navigation }) {
   const { colors } = useAppTheme();
@@ -39,9 +41,11 @@ export default function WalletScreen({ navigation }) {
     accountName: ''
   });
   const [savingBank, setSavingBank] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const loadData = async () => {
     try {
+      setErrorMessage('');
       const [walletRes, pricesRes, transactionsRes] = await Promise.all([
         walletAPI.getWallet(),
         priceAPI.getPrices(),
@@ -52,6 +56,7 @@ export default function WalletScreen({ navigation }) {
       setTransactions((transactionsRes.data.transactions || []).map(normalizeTransaction));
     } catch (error) {
       console.log('Load wallet error:', error);
+      setErrorMessage(getApiErrorMessage(error, 'Unable to load your wallet.'));
     }
   };
 
@@ -62,6 +67,7 @@ export default function WalletScreen({ navigation }) {
       setDepositAddress(response.data);
     } catch (error) {
       setDepositAddress(null);
+      setErrorMessage(getApiErrorMessage(error, 'Unable to load the deposit address.'));
     } finally {
       setLoadingAddress(false);
     }
@@ -115,6 +121,7 @@ export default function WalletScreen({ navigation }) {
       setBankForm({ bankName: '', bankCode: '', accountNumber: '', accountName: '' });
     } catch (error) {
       console.log('Save bank error:', error);
+      setErrorMessage(getApiErrorMessage(error, 'Unable to save this bank account.'));
     } finally {
       setSavingBank(false);
     }
@@ -129,6 +136,7 @@ export default function WalletScreen({ navigation }) {
       }));
     } catch (error) {
       console.log('Remove bank error:', error);
+      setErrorMessage(getApiErrorMessage(error, 'Unable to remove this bank account.'));
     }
   };
 
@@ -147,6 +155,7 @@ export default function WalletScreen({ navigation }) {
           </TouchableOpacity>
         ))}
       </View>
+      <InlineError message={errorMessage} onRetry={loadData} />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}

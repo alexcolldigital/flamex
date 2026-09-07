@@ -16,6 +16,16 @@ const apiClient = axios.create({
   }
 });
 
+export const getApiErrorMessage = (error, fallback = 'Something went wrong. Please try again.') => {
+  const data = error?.response?.data;
+  const validationError = Array.isArray(data?.errors) ? data.errors[0] : null;
+  const validationMessage = typeof validationError === 'string'
+    ? validationError
+    : validationError?.msg || validationError?.message;
+
+  return data?.message || data?.error || validationMessage || error?.message || fallback;
+};
+
 apiClient.interceptors.request.use(async (config) => {
   let token = await AsyncStorage.getItem('token');
 

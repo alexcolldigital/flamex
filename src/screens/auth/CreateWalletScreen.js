@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import { Keypair } from '@solana/web3.js';
 import { useAuthStore } from '../../store/authStore';
+import InlineError from '../../components/common/InlineError';
 import { useAppTheme } from '../../theme/ThemeProvider';
 
 const SUPPORTED_CHAINS = [
@@ -39,6 +40,7 @@ export default function CreateWalletScreen({ navigation, route }) {
   const [mnemonic, setMnemonic] = useState('');
   const [selectedChains, setSelectedChains] = useState(['solana']);
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [isSuggestingUsername, setIsSuggestingUsername] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -140,6 +142,7 @@ export default function CreateWalletScreen({ navigation, route }) {
     }
 
     setIsLoading(true);
+    setErrorMessage('');
     const { confirmPassword: unusedConfirmPassword, ...registrationData } = userData;
     const result = await register({
       ...registrationData,
@@ -150,6 +153,7 @@ export default function CreateWalletScreen({ navigation, route }) {
     setIsLoading(false);
 
     if (!result.success) {
+      setErrorMessage(result.error);
       Alert.alert('Registration failed', result.error);
     }
   };
@@ -173,6 +177,7 @@ export default function CreateWalletScreen({ navigation, route }) {
         </View>
 
         <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
+          <InlineError message={errorMessage} onRetry={handleRegister} />
           {step === 1 ? (
             <View>
               <Text style={styles.stepTitle}>{isRestore ? 'Enter your recovery phrase' : 'Your recovery phrase'}</Text>

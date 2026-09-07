@@ -19,6 +19,8 @@ import {
 import { useAuthStore } from '../../store/authStore';
 import { useNotificationStore } from '../../store/notificationStore';
 import { useAppTheme } from '../../theme/ThemeProvider';
+import InlineError from '../../components/common/InlineError';
+import { getApiErrorMessage } from '../../api/client';
 
 export default function HomeScreen({ navigation }) {
   const { user, logout, fetchUserProfile } = useAuthStore();
@@ -34,9 +36,11 @@ export default function HomeScreen({ navigation }) {
     FLAME: { staked: 0, rewards: 0 }
   });
   const [refreshing, setRefreshing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const loadData = async () => {
     try {
+      setErrorMessage('');
       const [walletRes, pricesRes, stakingRes, ngnRateRes] = await Promise.all([
         walletAPI.getWallet(),
         priceAPI.getPrices(),
@@ -50,6 +54,7 @@ export default function HomeScreen({ navigation }) {
       setNgnRate(ngnRateRes.data);
     } catch (error) {
       console.log('Load dashboard error:', error);
+      setErrorMessage(getApiErrorMessage(error, 'Unable to load your dashboard.'));
     }
   };
 
@@ -123,6 +128,8 @@ export default function HomeScreen({ navigation }) {
             </TouchableOpacity>
           </View>
         </View>
+
+        <InlineError message={errorMessage} onRetry={loadData} />
 
         <View style={styles.balanceCard}>
           <Text style={styles.balanceLabel}>Total Portfolio Value</Text>
