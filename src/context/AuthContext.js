@@ -50,7 +50,12 @@ export const AuthProvider = ({ children }) => {
       await AsyncStorage.setItem('user', JSON.stringify(user));
       setUser(user);
       setIsAuthenticated(true);
-      return { success: true, user };
+      return {
+        success: true,
+        user,
+        requiresEmailVerification: user.emailVerified !== true,
+        emailVerificationSent: response.data.emailVerificationSent === true
+      };
     } catch (error) {
       return { 
         success: false, 

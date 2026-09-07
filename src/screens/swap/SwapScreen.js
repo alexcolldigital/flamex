@@ -142,7 +142,8 @@ export default function SwapScreen({ navigation }) {
   const handleSwap = async () => {
     if (!amount || Number(amount) <= 0) return;
 
-    if (Number(fromBalance) < Number(amount)) {
+    const quotedFee = Number(quote?.fee || 0);
+    if (Number(fromBalance) < Number(amount) + quotedFee) {
       setErrorMessage(`Insufficient available ${fromToken} balance`);
       return;
     }
@@ -339,6 +340,10 @@ export default function SwapScreen({ navigation }) {
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Price impact</Text>
                 <Text style={styles.infoValue}>{quote.priceImpact || '0'}%</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Platform fee</Text>
+                <Text style={styles.infoValue}>{quote.fee || 0} {quote.feeCurrency || fromToken}</Text>
               </View>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>ETA</Text>

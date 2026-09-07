@@ -33,11 +33,13 @@ export default function EmailVerificationScreen({ navigation, route }) {
       : result.error);
   };
 
+  const autoSent = route?.params?.emailVerificationSent === true;
+
   useEffect(() => {
-    if (email && !user?.emailVerified) {
+    if (email && !user?.emailVerified && !autoSent) {
       sendCode();
     }
-  }, [email, user?.emailVerified]);
+  }, []);
 
   const verifyCode = async () => {
     if (!/^\d{6}$/.test(code)) {
