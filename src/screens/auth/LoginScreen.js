@@ -9,7 +9,7 @@ import { useAuthStore } from '../../store/authStore';
 const C = {
   bg: '#080B12', card: '#111722', border: '#1E293B',
   text: '#FFFFFF', muted: '#94A3B8', sub: '#475569',
-  green: '#22C55E', greenSoft: 'rgba(34,197,94,0.12)',
+  green: '#f59e2c', greenSoft: 'rgba(245,158,44,0.12)',
   red: '#EF4444',
 };
 

@@ -19,16 +19,16 @@ export default function Button({
     : { paddingVertical: 14, paddingHorizontal: 24 };
 
   const variantStyle = {
-    primary:   { backgroundColor: '#22C55E' },
+    primary:   { backgroundColor: '#f59e2c' },
     secondary: { backgroundColor: '#1E293B' },
-    outline:   { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#22C55E' },
+    outline:   { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#f59e2c' },
     danger:    { backgroundColor: '#EF4444' },
-  }[variant] || { backgroundColor: '#22C55E' };
+  }[variant] || { backgroundColor: '#f59e2c' };
 
   const textColor = {
     primary:   '#080B12',
     secondary: '#FFFFFF',
-    outline:   '#22C55E',
+    outline:   '#f59e2c',
     danger:    '#FFFFFF',
   }[variant] || '#080B12';
 

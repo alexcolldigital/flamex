@@ -2,9 +2,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { authAPI } from '../api/client';
 
-const persistSession = async (token, user) => {
+const persistSession = async (token, user, emailVerificationSent = false) => {
   await AsyncStorage.setItem('token', token);
   await AsyncStorage.setItem('user', JSON.stringify(user));
+  await AsyncStorage.setItem('emailVerificationSent', String(emailVerificationSent));
 };
 
 export const useAuthStore = create((set, get) => ({
@@ -19,9 +20,10 @@ export const useAuthStore = create((set, get) => ({
   initializeAuth: async () => {
     set({ isLoading: true });
     try {
-      const [token, storedUser] = await Promise.all([
+      const [token, storedUser, storedEmailVerificationSent] = await Promise.all([
         AsyncStorage.getItem('token'),
-        AsyncStorage.getItem('user')
+        AsyncStorage.getItem('user'),
+        AsyncStorage.getItem('emailVerificationSent')
       ]);
 
       if (!token || !storedUser) {
@@ -32,6 +34,7 @@ export const useAuthStore = create((set, get) => ({
       set({
         token,
         user: JSON.parse(storedUser),
+        emailVerificationSent: storedEmailVerificationSent === 'true',
         isAuthenticated: true,
         isLoading: false
       });
@@ -56,7 +59,7 @@ export const useAuthStore = create((set, get) => ({
       const response = await authAPI.login({ email, password });
       const { token, user } = response.data;
 
-      await persistSession(token, user);
+      await persistSession(token, user, response.data.emailVerificationSent === true);
       set({
         token,
         user,
@@ -79,11 +82,11 @@ export const useAuthStore = create((set, get) => ({
       const response = await authAPI.register(userData);
       const { token, user } = response.data;
 
-      await persistSession(token, user);
+      await persistSession(token, user, response.data.emailVerificationSent === true);
       set({
         token,
         user,
-        emailVerificationSent: false,
+        emailVerificationSent: response.data.emailVerificationSent === true,
         isAuthenticated: true,
         isLoading: false
       });
@@ -104,7 +107,7 @@ export const useAuthStore = create((set, get) => ({
   },
 
   logout: async () => {
-    await AsyncStorage.multiRemove(['token', 'user']);
+    await AsyncStorage.multiRemove(['token', 'user', 'emailVerificationSent']);
     set({
       user: null,
       token: null,
@@ -212,6 +215,7 @@ export const useAuthStore = create((set, get) => ({
     try {
       const response = await authAPI.requestEmailOtp(email, purpose);
       if (purpose === 'verify_email') {
+        await AsyncStorage.setItem('emailVerificationSent', 'true');
         set({ emailVerificationSent: true });
       }
       return { success: true, ...response.data };
@@ -233,6 +237,7 @@ export const useAuthStore = create((set, get) => ({
           emailVerified: true
         };
         await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+        await AsyncStorage.removeItem('emailVerificationSent');
         set({ user: updatedUser });
       }
       return { success: true, ...response.data };

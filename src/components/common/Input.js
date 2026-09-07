@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     minHeight: 54,
   },
-  focused: { borderColor: '#22C55E' },
+  focused: { borderColor: '#f59e2c' },
   errored: { borderColor: '#EF4444' },
   disabled: { opacity: 0.5 },
   iconLeft: { marginRight: 10 },
