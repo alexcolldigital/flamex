@@ -28,6 +28,7 @@
     "crypto-browserify": "^3.12.1",
     "crypto-js": "^4.2.0",
     "dns.js": "^1.0.1",
+    "ed25519-hd-key": "^2.0.0",
     "ethers": "^6.16.0",
     "expo": "~55.0.15",
     "expo-clipboard": "~55.0.13",

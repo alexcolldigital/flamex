@@ -55,6 +55,9 @@ export default function WelcomeScreen({ navigation }) {
           <TouchableOpacity style={styles.secondaryBtn} onPress={() => navigation.navigate('Login')}>
             <Text style={styles.secondaryBtnText}>I Already Have a Wallet</Text>
           </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('CreateWallet', { restore: true })}>
+            <Text style={styles.restoreText}>Restore with recovery phrase</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.securityRow}>
@@ -111,6 +114,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', borderWidth: 1, borderColor: C.border,
   },
   secondaryBtnText: { fontSize: 16, fontWeight: '600', color: C.text },
+  restoreText: { color: C.green, fontSize: 14, fontWeight: '600', textAlign: 'center', padding: 8 },
 
   securityRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   securityText: { fontSize: 12, color: C.sub },

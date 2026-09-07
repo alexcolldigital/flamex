@@ -2,7 +2,8 @@ import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { ethers } from 'ethers';
-import { generateMnemonic } from 'bip39';
+import { generateMnemonic, mnemonicToSeedSync, validateMnemonic } from 'bip39';
+import { derivePath } from 'ed25519-hd-key';
 import bs58 from 'bs58';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
@@ -28,7 +29,8 @@ const SUPPORTED_CHAINS = [
   { id: 'polygon', name: 'Polygon', symbol: 'MATIC', color: '#8247E5' }
 ];
 
-export default function CreateWalletScreen({ navigation }) {
+export default function CreateWalletScreen({ navigation, route }) {
+  const isRestore = route?.params?.restore === true;
   const { register, checkUsernameAvailability } = useAuthStore();
   const { colors, isDark } = useAppTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -52,8 +54,8 @@ export default function CreateWalletScreen({ navigation }) {
   });
 
   useEffect(() => {
-    setMnemonic(generateMnemonic());
-  }, []);
+    if (!isRestore) setMnemonic(generateMnemonic());
+  }, [isRestore]);
 
   const copyMnemonic = async () => {
     await Clipboard.setStringAsync(mnemonic);
@@ -69,23 +71,27 @@ export default function CreateWalletScreen({ navigation }) {
   };
 
   const generateWallets = () => {
+    const phrase = mnemonic.trim();
+    const seed = mnemonicToSeedSync(phrase);
+    const solanaSeed = derivePath("m/44'/501'/0'/0'", Buffer.from(seed).toString('hex')).key;
+    const solanaKeypair = Keypair.fromSeed(solanaSeed);
+    const evmWallet = ethers.Wallet.fromPhrase(phrase, "m/44'/60'/0'/0/0");
+
     return selectedChains.map((chainId) => {
       if (chainId === 'solana') {
-        const keypair = Keypair.generate();
         return {
           chainId,
-          address: keypair.publicKey.toString(),
-          publicKey: keypair.publicKey.toString(),
-          privateKey: bs58.encode(keypair.secretKey)
+          address: solanaKeypair.publicKey.toString(),
+          publicKey: solanaKeypair.publicKey.toString(),
+          privateKey: bs58.encode(solanaKeypair.secretKey)
         };
       }
 
-      const wallet = ethers.Wallet.createRandom();
       return {
         chainId,
-        address: wallet.address,
-        publicKey: wallet.publicKey,
-        privateKey: wallet.privateKey
+        address: evmWallet.address,
+        publicKey: evmWallet.publicKey,
+        privateKey: evmWallet.privateKey
       };
     });
   };
@@ -128,6 +134,10 @@ export default function CreateWalletScreen({ navigation }) {
       Alert.alert('Invalid username', 'Username must be 3-30 characters using only letters, numbers, and underscores.');
       return;
     }
+    if (!validateMnemonic(mnemonic.trim())) {
+      Alert.alert('Invalid recovery phrase', 'Enter all 12 words in the correct order.');
+      return;
+    }
 
     setIsLoading(true);
     const { confirmPassword: unusedConfirmPassword, ...registrationData } = userData;
@@ -152,7 +162,7 @@ export default function CreateWalletScreen({ navigation }) {
           <TouchableOpacity onPress={() => (step > 1 ? setStep(step - 1) : navigation.goBack())}>
             <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Create Wallet</Text>
+          <Text style={styles.headerTitle}>{isRestore ? 'Restore Wallet' : 'Create Wallet'}</Text>
           <View style={styles.placeholder} />
         </View>
 
@@ -165,29 +175,46 @@ export default function CreateWalletScreen({ navigation }) {
         <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
           {step === 1 ? (
             <View>
-              <Text style={styles.stepTitle}>Your recovery phrase</Text>
+              <Text style={styles.stepTitle}>{isRestore ? 'Enter your recovery phrase' : 'Your recovery phrase'}</Text>
               <Text style={styles.stepDescription}>
-                Write these 12 words down. This phrase is the only way to recover your non-custodial wallet.
+                {isRestore
+                  ? 'Enter the 12 words in order. The same phrase will recreate the wallet addresses.'
+                  : 'Write these 12 words down. This phrase is the only way to recover your non-custodial wallet.'}
               </Text>
 
               <View style={styles.card}>
-                <View style={styles.mnemonicGrid}>
-                  {mnemonic.split(' ').map((word, index) => (
-                    <View key={word + index} style={styles.wordBadge}>
-                      <Text style={styles.wordNumber}>{index + 1}</Text>
-                      <Text style={styles.wordText}>{word}</Text>
+                {isRestore ? (
+                  <TextInput
+                    style={[styles.input, styles.recoveryInput]}
+                    value={mnemonic}
+                    onChangeText={(value) => setMnemonic(value.toLowerCase().replace(/\s+/g, ' '))}
+                    placeholder="word1 word2 word3 ..."
+                    placeholderTextColor={colors.textMuted}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    multiline
+                  />
+                ) : (
+                  <>
+                    <View style={styles.mnemonicGrid}>
+                      {mnemonic.split(' ').map((word, index) => (
+                        <View key={word + index} style={styles.wordBadge}>
+                          <Text style={styles.wordNumber}>{index + 1}</Text>
+                          <Text style={styles.wordText}>{word}</Text>
+                        </View>
+                      ))}
                     </View>
-                  ))}
-                </View>
 
-                <TouchableOpacity style={styles.secondaryButton} onPress={copyMnemonic}>
-                  <Ionicons name="copy-outline" size={18} color={colors.primary} />
-                  <Text style={styles.secondaryButtonText}>Copy phrase</Text>
-                </TouchableOpacity>
+                    <TouchableOpacity style={styles.secondaryButton} onPress={copyMnemonic}>
+                      <Ionicons name="copy-outline" size={18} color={colors.primary} />
+                      <Text style={styles.secondaryButtonText}>Copy phrase</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
               </View>
 
               <TouchableOpacity style={styles.primaryButton} onPress={() => setStep(2)}>
-                <Text style={styles.primaryButtonText}>I have saved it</Text>
+                <Text style={styles.primaryButtonText}>{isRestore ? 'Continue with phrase' : 'I have saved it'}</Text>
               </TouchableOpacity>
             </View>
           ) : null}
@@ -531,5 +558,9 @@ const createStyles = (colors) =>
       paddingHorizontal: 16,
       paddingVertical: 15,
       marginBottom: 12
+    },
+    recoveryInput: {
+      minHeight: 110,
+      textAlignVertical: 'top'
     }
   });
