@@ -16,7 +16,7 @@ import { useAppTheme } from '../../theme/ThemeProvider';
 
 export default function EmailVerificationScreen({ navigation, route }) {
   const { colors } = useAppTheme();
-  const { user, logout, requestEmailOtp, verifyEmailOtp } = useAuthStore();
+  const { user, emailVerificationSent, logout, requestEmailOtp, verifyEmailOtp } = useAuthStore();
   const isRequired = route?.params?.required === true;
   const [code, setCode] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -33,7 +33,7 @@ export default function EmailVerificationScreen({ navigation, route }) {
       : result.error);
   };
 
-  const autoSent = route?.params?.emailVerificationSent === true;
+  const autoSent = route?.params?.emailVerificationSent === true || emailVerificationSent;
 
   useEffect(() => {
     if (email && !user?.emailVerified && !autoSent) {

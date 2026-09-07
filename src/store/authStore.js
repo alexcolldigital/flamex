@@ -11,6 +11,7 @@ export const useAuthStore = create((set, get) => ({
   user: null,
   token: null,
   preferences: null,
+  emailVerificationSent: false,
   isAuthenticated: false,
   isLoading: false,
   error: null,
@@ -59,6 +60,7 @@ export const useAuthStore = create((set, get) => ({
       set({
         token,
         user,
+        emailVerificationSent: response.data.emailVerificationSent === true,
         isAuthenticated: true,
         isLoading: false
       });
@@ -81,6 +83,7 @@ export const useAuthStore = create((set, get) => ({
       set({
         token,
         user,
+        emailVerificationSent: false,
         isAuthenticated: true,
         isLoading: false
       });
@@ -106,6 +109,7 @@ export const useAuthStore = create((set, get) => ({
       user: null,
       token: null,
       preferences: null,
+      emailVerificationSent: false,
       isAuthenticated: false,
       error: null
     });
@@ -207,6 +211,9 @@ export const useAuthStore = create((set, get) => ({
   requestEmailOtp: async (email, purpose = 'verify_email') => {
     try {
       const response = await authAPI.requestEmailOtp(email, purpose);
+      if (purpose === 'verify_email') {
+        set({ emailVerificationSent: true });
+      }
       return { success: true, ...response.data };
     } catch (error) {
       return {
